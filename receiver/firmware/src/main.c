@@ -82,8 +82,8 @@
 #include "nrf_log_ctrl.h"
 
 
-#define DEVICE_NAME                     "Nordic_CSC"                                /**< Name of device. Will be included in the advertising data. */
-#define MANUFACTURER_NAME               "NordicSemiconductor"                       /**< Manufacturer. Will be passed to Device Information Service. */
+#define DEVICE_NAME                     "Microsoft BLE Receiver"                                /**< Name of device. Will be included in the advertising data. */
+#define MANUFACTURER_NAME               "Microsoft"                       /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL                40                                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 25 ms). */
 #define APP_ADV_TIMEOUT_IN_SECONDS      180                                         /**< The advertising timeout in units of seconds. */
 
@@ -91,22 +91,6 @@
 #define MIN_BATTERY_LEVEL               81                                          /**< Minimum battery level as returned by the simulated measurement function. */
 #define MAX_BATTERY_LEVEL               100                                         /**< Maximum battery level as returned by the simulated measurement function. */
 #define BATTERY_LEVEL_INCREMENT         1                                           /**< Value by which the battery level is incremented/decremented for each call to the simulated measurement function. */
-
-#define SPEED_AND_CADENCE_MEAS_INTERVAL 1000                                        /**< Speed and cadence measurement interval (milliseconds). */
-
-#define WHEEL_CIRCUMFERENCE_MM          2100                                        /**< Simulated wheel circumference in millimeters. */
-#define KPH_TO_MM_PER_SEC               278                                         /**< Constant to convert kilometers per hour into millimeters per second. */
-
-#define MIN_SPEED_KPH                   10                                          /**< Minimum speed in kilometers per hour for use in the simulated measurement function. */
-#define MAX_SPEED_KPH                   40                                          /**< Maximum speed in kilometers per hour for use in the simulated measurement function. */
-#define SPEED_KPH_INCREMENT             1                                           /**< Value by which speed is incremented/decremented for each call to the simulated measurement function. */
-
-#define DEGREES_PER_REVOLUTION          360                                         /**< Constant used in simulation for calculating crank speed. */
-#define RPM_TO_DEGREES_PER_SEC          6                                           /**< Constant to convert revolutions per minute into degrees per second. */
-
-#define MIN_CRANK_RPM                   20                                          /**< Minimum cadence in RPM for use in the simulated measurement function. */
-#define MAX_CRANK_RPM                   110                                         /**< Maximum cadence in RPM for use in the simulated measurement function. */
-#define CRANK_RPM_INCREMENT             3                                           /**< Value by which cadence is incremented/decremented in the simulated measurement function. */
 
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(500, UNIT_1_25_MS)            /**< Minimum acceptable connection interval (0.5 seconds). */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(1000, UNIT_1_25_MS)           /**< Maximum acceptable connection interval (1 second). */
@@ -137,26 +121,7 @@ static nrf_ble_gatt_t m_gatt;
 static sensorsim_cfg_t   m_battery_sim_cfg;                                         /**< Battery Level sensor simulator configuration. */
 static sensorsim_state_t m_battery_sim_state;                                       /**< Battery Level sensor simulator state. */
 
-static sensorsim_cfg_t   m_speed_kph_sim_cfg;                                       /**< Speed simulator configuration. */
-static sensorsim_state_t m_speed_kph_sim_state;                                     /**< Speed simulator state. */
-static sensorsim_cfg_t   m_crank_rpm_sim_cfg;                                       /**< Crank simulator configuration. */
-static sensorsim_state_t m_crank_rpm_sim_state;                                     /**< Crank simulator state. */
-
 APP_TIMER_DEF(m_battery_timer_id);                                                  /**< Battery timer. */
-APP_TIMER_DEF(m_csc_meas_timer_id);                                                 /**< CSC measurement timer. */
-static uint32_t m_cumulative_wheel_revs;                                            /**< Cumulative wheel revolutions. */
-static bool     m_auto_calibration_in_progress;                                     /**< Set when an autocalibration is in progress. */
-
-static ble_sensor_location_t supported_locations[] = {BLE_SENSOR_LOCATION_FRONT_WHEEL,
-                                                      BLE_SENSOR_LOCATION_LEFT_CRANK,
-                                                      BLE_SENSOR_LOCATION_RIGHT_CRANK,
-                                                      BLE_SENSOR_LOCATION_LEFT_PEDAL,
-                                                      BLE_SENSOR_LOCATION_RIGHT_PEDAL,
-                                                      BLE_SENSOR_LOCATION_FRONT_HUB,
-                                                      BLE_SENSOR_LOCATION_REAR_DROPOUT,
-                                                      BLE_SENSOR_LOCATION_CHAINSTAY,
-                                                      BLE_SENSOR_LOCATION_REAR_WHEEL,
-                                                      BLE_SENSOR_LOCATION_REAR_HUB}; /**< supported location for the sensor location. */
 
 static ble_uuid_t m_adv_uuids[] = {{BLE_UUID_CYCLING_SPEED_AND_CADENCE, BLE_UUID_TYPE_BLE},
                                    {BLE_UUID_BATTERY_SERVICE, BLE_UUID_TYPE_BLE},
@@ -316,99 +281,6 @@ static void battery_level_meas_timeout_handler(void * p_context)
     battery_level_update();
 }
 
-
-/**@brief Function for populating simulated cycling speed and cadence measurements.
- */
-static void csc_sim_measurement(ble_cscs_meas_t * p_measurement)
-{
-    static uint16_t cumulative_crank_revs = 0;
-    static uint16_t event_time            = 0;
-    static uint16_t wheel_revolution_mm   = 0;
-    static uint16_t crank_rev_degrees     = 0;
-
-    uint16_t mm_per_sec;
-    uint16_t degrees_per_sec;
-    uint16_t event_time_inc;
-
-    // Per specification event time is in 1/1024th's of a second.
-    event_time_inc = (1024 * SPEED_AND_CADENCE_MEAS_INTERVAL) / 1000;
-
-    // Calculate simulated wheel revolution values.
-    p_measurement->is_wheel_rev_data_present = true;
-
-    mm_per_sec = KPH_TO_MM_PER_SEC * sensorsim_measure(&m_speed_kph_sim_state,
-                                                       &m_speed_kph_sim_cfg);
-
-    wheel_revolution_mm     += mm_per_sec * SPEED_AND_CADENCE_MEAS_INTERVAL / 1000;
-    m_cumulative_wheel_revs += wheel_revolution_mm / WHEEL_CIRCUMFERENCE_MM;
-    wheel_revolution_mm     %= WHEEL_CIRCUMFERENCE_MM;
-
-    p_measurement->cumulative_wheel_revs = m_cumulative_wheel_revs;
-    p_measurement->last_wheel_event_time =
-        event_time + (event_time_inc * (mm_per_sec - wheel_revolution_mm) / mm_per_sec);
-
-    // Calculate simulated cadence values.
-    p_measurement->is_crank_rev_data_present = true;
-
-    degrees_per_sec = RPM_TO_DEGREES_PER_SEC * sensorsim_measure(&m_crank_rpm_sim_state,
-                                                                 &m_crank_rpm_sim_cfg);
-
-    crank_rev_degrees     += degrees_per_sec * SPEED_AND_CADENCE_MEAS_INTERVAL / 1000;
-    cumulative_crank_revs += crank_rev_degrees / DEGREES_PER_REVOLUTION;
-    crank_rev_degrees     %= DEGREES_PER_REVOLUTION;
-
-    p_measurement->cumulative_crank_revs = cumulative_crank_revs;
-    p_measurement->last_crank_event_time =
-        event_time + (event_time_inc * (degrees_per_sec - crank_rev_degrees) / degrees_per_sec);
-
-    event_time += event_time_inc;
-}
-
-
-/**@brief Function for handling the Cycling Speed and Cadence measurement timer timeouts.
- *
- * @details This function will be called each time the cycling speed and cadence
- *          measurement timer expires.
- *
- * @param[in] p_context  Pointer used for passing some arbitrary information (context) from the
- *                       app_start_timer() call to the timeout handler.
- */
-static void csc_meas_timeout_handler(void * p_context)
-{
-    uint32_t        err_code;
-    ble_cscs_meas_t cscs_measurement;
-
-    UNUSED_PARAMETER(p_context);
-
-    csc_sim_measurement(&cscs_measurement);
-
-    err_code = ble_cscs_measurement_send(&m_cscs, &cscs_measurement);
-    if ((err_code != NRF_SUCCESS) &&
-        (err_code != NRF_ERROR_INVALID_STATE) &&
-        (err_code != NRF_ERROR_RESOURCES) &&
-        (err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
-       )
-    {
-        APP_ERROR_HANDLER(err_code);
-    }
-    if (m_auto_calibration_in_progress)
-    {
-        err_code = ble_sc_ctrlpt_rsp_send(&(m_cscs.ctrl_pt), BLE_SCPT_SUCCESS);
-        if ((err_code != NRF_SUCCESS) &&
-            (err_code != NRF_ERROR_INVALID_STATE) &&
-            (err_code != NRF_ERROR_RESOURCES)
-           )
-        {
-            APP_ERROR_HANDLER(err_code);
-        }
-        if (err_code != NRF_ERROR_RESOURCES)
-        {
-            m_auto_calibration_in_progress = false;
-        }
-    }
-}
-
-
 /**@brief Function for the Timer initialization.
  *
  * @details Initializes the timer module. This creates and starts application timers.
@@ -425,12 +297,6 @@ static void timers_init(void)
     err_code = app_timer_create(&m_battery_timer_id,
                                 APP_TIMER_MODE_REPEATED,
                                 battery_level_meas_timeout_handler);
-    APP_ERROR_CHECK(err_code);
-
-    // Create battery timer.
-    err_code = app_timer_create(&m_csc_meas_timer_id,
-                                APP_TIMER_MODE_REPEATED,
-                                csc_meas_timeout_handler);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -476,34 +342,6 @@ static void gatt_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-
-/**@brief Function for handling Speed and Cadence Control point events
- *
- * @details Function for handling Speed and Cadence Control point events.
- *          This function parses the event and in case the "set cumulative value" event is received,
- *          sets the wheel cumulative value to the received value.
- */
-ble_scpt_response_t sc_ctrlpt_event_handler(ble_sc_ctrlpt_t     * p_sc_ctrlpt,
-                                            ble_sc_ctrlpt_evt_t * p_evt)
-{
-    switch (p_evt->evt_type)
-    {
-        case BLE_SC_CTRLPT_EVT_SET_CUMUL_VALUE:
-            m_cumulative_wheel_revs = p_evt->params.cumulative_value;
-            break;
-
-        case BLE_SC_CTRLPT_EVT_START_CALIBRATION:
-            m_auto_calibration_in_progress = true;
-            break;
-
-        default:
-            // No implementation needed.
-            break;
-    }
-    return (BLE_SCPT_SUCCESS);
-}
-
-
 /**@brief Function for initializing services that will be used by the application.
  *
  * @details Initialize the Cycling Speed and Cadence, Battery and Device Information services.
@@ -514,7 +352,6 @@ static void services_init(void)
     ble_cscs_init_t       cscs_init;
     ble_bas_init_t        bas_init;
     ble_dis_init_t        dis_init;
-    ble_sensor_location_t sensor_location;
 
     // Initialize Cycling Speed and Cadence Service.
     memset(&cscs_init, 0, sizeof(cscs_init));
@@ -525,22 +362,6 @@ static void services_init(void)
 
     // Here the sec level for the Cycling Speed and Cadence Service can be changed/increased.
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cscs_init.csc_meas_attr_md.cccd_write_perm);   // for the measurement characteristic, only the CCCD write permission can be set by the application, others are mandated by service specification
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cscs_init.csc_feature_attr_md.read_perm);      // for the feature characteristic, only the read permission can be set by the application, others are mandated by service specification
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cscs_init.csc_ctrlpt_attr_md.write_perm);      // for the SC control point characteristic, only the write permission and CCCD write can be set by the application, others are mandated by service specification
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cscs_init.csc_ctrlpt_attr_md.cccd_write_perm); // for the SC control point characteristic, only the write permission and CCCD write can be set by the application, others are mandated by service specification
-
-    cscs_init.ctrplt_supported_functions = BLE_SRV_SC_CTRLPT_CUM_VAL_OP_SUPPORTED
-                                           | BLE_SRV_SC_CTRLPT_SENSOR_LOCATIONS_OP_SUPPORTED
-                                           | BLE_SRV_SC_CTRLPT_START_CALIB_OP_SUPPORTED;
-    cscs_init.ctrlpt_evt_handler            = sc_ctrlpt_event_handler;
-    cscs_init.list_supported_locations      = supported_locations;
-    cscs_init.size_list_supported_locations = sizeof(supported_locations) /
-                                              sizeof(ble_sensor_location_t);
-
-    sensor_location           = BLE_SENSOR_LOCATION_FRONT_WHEEL;                 // initializes the sensor location to add the sensor location characteristic.
-    cscs_init.sensor_location = &sensor_location;
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cscs_init.csc_sensor_loc_attr_md.read_perm); // for the sensor location characteristic, only the read permission can be set by the application, others are mendated by service specification
-
     err_code = ble_cscs_init(&m_cscs, &cscs_init);
     APP_ERROR_CHECK(err_code);
 
@@ -585,40 +406,16 @@ static void sensor_simulator_init(void)
     m_battery_sim_cfg.start_at_max = true;
 
     sensorsim_init(&m_battery_sim_state, &m_battery_sim_cfg);
-
-    m_speed_kph_sim_cfg.min          = MIN_SPEED_KPH;
-    m_speed_kph_sim_cfg.max          = MAX_SPEED_KPH;
-    m_speed_kph_sim_cfg.incr         = SPEED_KPH_INCREMENT;
-    m_speed_kph_sim_cfg.start_at_max = false;
-
-    sensorsim_init(&m_speed_kph_sim_state, &m_speed_kph_sim_cfg);
-
-    m_crank_rpm_sim_cfg.min          = MIN_CRANK_RPM;
-    m_crank_rpm_sim_cfg.max          = MAX_CRANK_RPM;
-    m_crank_rpm_sim_cfg.incr         = CRANK_RPM_INCREMENT;
-    m_crank_rpm_sim_cfg.start_at_max = false;
-
-    sensorsim_init(&m_crank_rpm_sim_state, &m_crank_rpm_sim_cfg);
-
-    m_cumulative_wheel_revs        = 0;
-    m_auto_calibration_in_progress = false;
 }
-
 
 /**@brief Function for starting application timers.
  */
 static void application_timers_start(void)
 {
     ret_code_t err_code;
-    uint32_t csc_meas_timer_ticks;
 
     // Start application timers.
     err_code = app_timer_start(m_battery_timer_id, BATTERY_LEVEL_MEAS_INTERVAL, NULL);
-    APP_ERROR_CHECK(err_code);
-
-    csc_meas_timer_ticks = APP_TIMER_TICKS(SPEED_AND_CADENCE_MEAS_INTERVAL);
-
-    err_code = app_timer_start(m_csc_meas_timer_id, csc_meas_timer_ticks, NULL);
     APP_ERROR_CHECK(err_code);
 }
 
