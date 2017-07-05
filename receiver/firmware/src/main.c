@@ -63,7 +63,6 @@
 #include "ble_advdata.h"
 #include "ble_advertising.h"
 #include "ble_bas.h"
-#include "ble_cscs.h"
 #include "ble_dis.h"
 #include "ble_conn_params.h"
 #include "sensorsim.h"
@@ -76,6 +75,9 @@
 #include "fstorage.h"
 #include "ble_conn_state.h"
 #include "nrf_ble_gatt.h"
+
+#include "receiver.h"
+
 
 #define NRF_LOG_MODULE_NAME "APP"
 #include "nrf_log.h"
@@ -115,7 +117,7 @@
 
 static uint16_t       m_conn_handle = BLE_CONN_HANDLE_INVALID;                      /**< Handle of the current connection. */
 static ble_bas_t      m_bas;                                                        /**< Structure used to identify the battery service. */
-static ble_cscs_t     m_cscs;                                                       /**< Structure used to identify the cycling speed and cadence service. */
+static ble_receiver_t     m_receiver;                                                       /**< Structure used to identify the cycling speed and cadence service. */
 static nrf_ble_gatt_t m_gatt;
 
 static sensorsim_cfg_t   m_battery_sim_cfg;                                         /**< Battery Level sensor simulator configuration. */
@@ -349,20 +351,18 @@ static void gatt_init(void)
 static void services_init(void)
 {
     uint32_t              err_code;
-    ble_cscs_init_t       cscs_init;
+    ble_receiver_init_t       receiver_init;
     ble_bas_init_t        bas_init;
     ble_dis_init_t        dis_init;
 
     // Initialize Cycling Speed and Cadence Service.
-    memset(&cscs_init, 0, sizeof(cscs_init));
+    memset(&receiver_init, 0, sizeof(receiver_init));
 
-    cscs_init.evt_handler = NULL;
-    cscs_init.feature     = BLE_CSCS_FEATURE_WHEEL_REV_BIT | BLE_CSCS_FEATURE_CRANK_REV_BIT |
-                            BLE_CSCS_FEATURE_MULTIPLE_SENSORS_BIT;
+    receiver_init.evt_handler = NULL;
 
     // Here the sec level for the Cycling Speed and Cadence Service can be changed/increased.
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cscs_init.csc_meas_attr_md.cccd_write_perm);   // for the measurement characteristic, only the CCCD write permission can be set by the application, others are mandated by service specification
-    err_code = ble_cscs_init(&m_cscs, &cscs_init);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&receiver_init.csc_meas_attr_md.cccd_write_perm);   // for the measurement characteristic, only the CCCD write permission can be set by the application, others are mandated by service specification
+    err_code = ble_receiver_init(&m_receiver, &receiver_init);
     APP_ERROR_CHECK(err_code);
 
     // Initialize Battery Service.
@@ -465,7 +465,7 @@ static void conn_params_init(void)
     connection_params_init.first_conn_params_update_delay = FIRST_CONN_PARAMS_UPDATE_DELAY;
     connection_params_init.next_conn_params_update_delay  = NEXT_CONN_PARAMS_UPDATE_DELAY;
     connection_params_init.max_conn_params_update_count   = MAX_CONN_PARAMS_UPDATE_COUNT;
-    connection_params_init.start_on_notify_cccd_handle    = m_cscs.meas_handles.cccd_handle;
+    connection_params_init.start_on_notify_cccd_handle    = m_receiver.meas_handles.cccd_handle;
     connection_params_init.disconnect_on_fail             = false;
     connection_params_init.evt_handler                    = on_conn_params_evt;
     connection_params_init.error_handler                  = conn_params_error_handler;
@@ -614,7 +614,7 @@ static void ble_evt_dispatch(ble_evt_t * p_ble_evt)
      * Remember to call ble_conn_state_on_ble_evt before calling any ble_conns_state_* functions. */
     ble_conn_state_on_ble_evt(p_ble_evt);
     pm_on_ble_evt(p_ble_evt);
-    ble_cscs_on_ble_evt(&m_cscs, p_ble_evt);
+    ble_receiver_on_ble_evt(&m_receiver, p_ble_evt);
     ble_bas_on_ble_evt(&m_bas, p_ble_evt);
     ble_conn_params_on_ble_evt(p_ble_evt);
     bsp_btn_ble_on_ble_evt(p_ble_evt);
