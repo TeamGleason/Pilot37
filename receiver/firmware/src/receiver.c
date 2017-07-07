@@ -52,6 +52,8 @@
 #include "nrf_drv_pwm.h"
 #include "app_util_platform.h"
 
+// XXX all guids are temporary
+
 #define OPCODE_LENGTH 1                                                             /**< Length of opcode inside Cycling Speed and Cadence Measurement packet. */
 #define HANDLE_LENGTH 2                                                             /**< Length of handle inside Cycling Speed and Cadence Measurement packet. */
 #define MAX_CSCM_LEN  (BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH - HANDLE_LENGTH)    /**< Maximum size of a transmitted Cycling Speed and Cadence Measurement. */
@@ -72,6 +74,123 @@ nrf_pwm_sequence_t const g_pwm_seq = {
 };
 
 bool g_pwm_new_values = false;
+
+
+void ble_receiver_gpio_set(ble_receiver_t *p_receiver, gpio_value *vals)
+{
+  for (int i = 0; p_receiver->config->gpios_count; i++,vals++) {
+    nrf_gpio_pin_write(p_receiver->config->gpios[i].pin,
+		       *vals);
+  }
+}
+
+void ble_receiver_gpio_set_validate(ble_receiver_t *p_receiver, uint8_t * p_data, uint16_t length)
+{
+}
+void ble_receiver_gpio_set_failsafe(ble_receiver_t *p_receiver)
+{
+  gpio_value vals[32];
+
+  for (int i = 0; p_receiver->config->gpios_count; i++) {
+    vals[i]= p_receiver->config->gpios[i].failsafe_value;
+  }
+  ble_receiver_gpio_set(p_receiver, vals);
+}
+
+void ble_receiver_gpio_init(ble_receiver_t *p_receiver,ble_receiver_init_t *p_receiver_init)
+{
+  gpio_value vals[32];
+
+  if (p_receiver_init->config->gpios_count == 0) {
+    return;
+  }
+
+  for (int i = 0; i < p_receiver_init->config->gpios_count; i++) {
+    nrf_gpio_cfg_output(p_receiver_init->config->gpios[i].pin);
+    vals[i] = p_receiver_init->config->gpios[i].failsafe_value;
+  }
+
+  ble_receiver_gpio_set(p_receiver, vals);
+}
+
+void ble_receiver_pwm_set(ble_receiver_t *p_receiver, pwm_value *vals)
+{
+  pwm_value *channel = (pwm_value *)&g_pwm_seq_values_new.channel_0;
+
+  for (int i = 0; i < p_receiver->pwm_count; i++) {
+    *channel++ = *vals++;
+  }
+  g_pwm_new_values = true;
+}
+
+void ble_receiver_pwm_set_validate(ble_receiver_t *p_receiver, uint8_t * p_data, uint16_t length)
+{
+}
+
+
+void ble_receiver_pwm_update(void)
+{
+  if (g_pwm_new_values == false) {
+    return;
+  }
+
+  uint16_t *channel_new = &g_pwm_seq_values_new.channel_0;
+  uint16_t *channel_active = &g_pwm_seq_values.channel_0;
+
+  *channel_active++ = *channel_new++;
+  *channel_active++ = *channel_new++;
+  *channel_active++ = *channel_new++;
+  *channel_active++ = *channel_new++;
+  g_pwm_new_values = false;
+}
+
+void ble_receiver_pwm_start(ble_receiver_t *p_receiver)
+{
+  nrf_drv_pwm_simple_playback(&g_pwm_instance,
+			      &g_pwm_seq,
+			      1,
+			      NRF_DRV_PWM_FLAG_LOOP | 
+			      NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ0 |
+			      NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ1);
+}
+
+void pwm_handler(nrf_drv_pwm_evt_type_t event_type)
+{
+
+  if (g_pwm_new_values == false) {
+    return;
+  }
+
+  if ((event_type == NRF_DRV_PWM_EVT_END_SEQ0) || (event_type == NRF_DRV_PWM_EVT_END_SEQ1)) {
+    ble_receiver_pwm_update();
+  }
+}
+
+void ble_receiver_pwm_set_failsafe(ble_receiver_t *p_receiver)
+{
+  pwm_value vals[4];
+
+  for (int i = 0; i < 4; i++) {
+    if (i < p_receiver->pwm_count) {
+      vals[i] = p_receiver->config->pwms[i].pin;
+    } else {
+      vals[i] = 0;
+    }
+  }
+  ble_receiver_pwm_set(p_receiver, vals);
+}
+
+#if NOT_YET
+void ble_receiver_pwm_watchdog(ble_receiver_t *p_receiver)
+{
+  ble_receiver_pwm_set_failsafe(p_receiver);
+}
+#endif
+
+void ble_receiver_heartbeat_received(ble_receiver_t *p_receiver)
+{
+}
+
 
 /**@brief Function for handling the Connect event.
  *
@@ -132,9 +251,9 @@ static void on_meas_cccd_write(ble_receiver_t * p_receiver, ble_gatts_evt_write_
  */
 static void on_write(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
 {
-#if NOT_YET
     ble_gatts_evt_write_t * p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
 
+#if NOT_YET
     if (p_evt_write->handle == p_receiver->meas_handles.cccd_handle)
     {
         on_meas_cccd_write(p_receiver, p_evt_write);
@@ -143,6 +262,10 @@ static void on_write(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
 #endif
     if (p_evt_write->handle == p_receiver->heartbeat_handles.value_handle) {
       ble_receiver_heartbeat_received(p_receiver);
+    } else if (p_evt_write->handle == p_receiver->gpio_handles.value_handle) {
+      ble_receiver_gpio_set_validate(p_receiver, p_evt_write->data, p_evt_write->len);
+    } else if (p_evt_write->handle == p_receiver->pwm_handles.value_handle) {
+      ble_receiver_pwm_set_validate(p_receiver, p_evt_write->data, p_evt_write->len);
     } 
 }
 
@@ -280,7 +403,7 @@ static uint32_t receiver_deviceid_char_add(ble_receiver_t * p_receiver, const bl
                                            &p_receiver->deviceid_handles);
 }
 
-static uint32_t receiver_heartbeat_char_add(ble_receiver_t * p_receiver, const ble_receiver_init_t * p_receiver_init)
+static uint32_t receiver_write_char_add(ble_receiver_t * p_receiver, const ble_receiver_init_t * p_receiver_init, uint16_t uuid, ble_gatts_char_handles_t *const 	p_handles)
 {
     ble_gatts_char_md_t char_md;
     ble_gatts_attr_t    attr_char_value;
@@ -296,8 +419,8 @@ static uint32_t receiver_heartbeat_char_add(ble_receiver_t * p_receiver, const b
     char_md.p_cccd_md                = NULL;
     char_md.p_sccd_md                = NULL;
 
-    ble_uuid.type = p_receiver->uuid_type;
-    ble_uuid.uuid = BLE_UUID_NUS_RX_CHARACTERISTIC;
+    // XXX temp
+    BLE_UUID_BLE_ASSIGN(ble_uuid, uuid);
 
     memset(&attr_md, 0, sizeof(attr_md));
 
@@ -320,112 +443,8 @@ static uint32_t receiver_heartbeat_char_add(ble_receiver_t * p_receiver, const b
     return sd_ble_gatts_characteristic_add(p_receiver->service_handle,
                                            &char_md,
                                            &attr_char_value,
-                                           &p_receiver->heartbeat_handles);
+                                           p_handles);
 }
-
-void ble_receiver_gpio_set(ble_receiver_t *p_receiver, gpio_value *vals)
-{
-  for (int i = 0; p_receiver->config->gpios_count; i++,vals++) {
-    nrf_gpio_pin_write(p_receiver->config->gpios[i].pin,
-		       *vals);
-  }
-}
-
-void ble_receiver_gpio_set_failsafe(ble_receiver_t *p_receiver)
-{
-  gpio_value vals[32];
-
-  for (int i = 0; p_receiver->config->gpios_count; i++) {
-    vals[i]= p_receiver->config->gpios[i].failsafe_value;
-  }
-  ble_receiver_gpio_set(p_receiver, vals);
-}
-
-void ble_receiver_gpio_init(ble_receiver_t *p_receiver,ble_receiver_init_t *p_receiver_init)
-{
-  gpio_value vals[32];
-
-  if (p_receiver_init->config->gpios_count == 0) {
-    return;
-  }
-
-  for (int i = 0; i < p_receiver_init->config->gpios_count; i++) {
-    nrf_gpio_cfg_output(p_receiver_init->config->gpios[i].pin);
-    vals[i] = p_receiver_init->config->gpios[i].failsafe_value;
-  }
-
-  ble_receiver_gpio_set(p_receiver, vals);
-}
-
-void ble_receiver_pwm_set(ble_receiver_t *p_receiver, pwm_value *vals)
-{
-  pwm_value *channel = (pwm_value *)&g_pwm_seq_values_new.channel_0;
-
-  for (int i = 0; i < p_receiver->pwm_count; i++) {
-    *channel++ = *vals++;
-  }
-  g_pwm_new_values = true;
-}
-
-void ble_receiver_pwm_update(void)
-{
-  if (g_pwm_new_values == false) {
-    return;
-  }
-
-  uint16_t *channel_new = &g_pwm_seq_values_new.channel_0;
-  uint16_t *channel_active = &g_pwm_seq_values.channel_0;
-
-  *channel_active++ = *channel_new++;
-  *channel_active++ = *channel_new++;
-  *channel_active++ = *channel_new++;
-  *channel_active++ = *channel_new++;
-  g_pwm_new_values = false;
-}
-
-void ble_receiver_pwm_start(ble_receiver_t *p_receiver)
-{
-  nrf_drv_pwm_simple_playback(&g_pwm_instance,
-			      &g_pwm_seq,
-			      1,
-			      NRF_DRV_PWM_FLAG_LOOP | 
-			      NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ0 |
-			      NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ1);
-}
-
-void pwm_handler(nrf_drv_pwm_evt_type_t event_type)
-{
-
-  if (g_pwm_new_values == false) {
-    return;
-  }
-
-  if ((event_type == NRF_DRV_PWM_EVT_END_SEQ0) || (event_type == NRF_DRV_PWM_EVT_END_SEQ1)) {
-    ble_receiver_pwm_update();
-  }
-}
-
-void ble_receiver_pwm_set_failsafe(ble_receiver_t *p_receiver)
-{
-  pwm_value vals[4];
-
-  for (int i = 0; i < 4; i++) {
-    if (i < p_receiver->pwm_count) {
-      vals[i] = p_receiver->config->pwms[i].pin;
-    } else {
-      vals[i] = 0;
-    }
-  }
-  ble_receiver_pwm_set(p_receiver, vals);
-}
-
-#if NOT_YET
-void ble_receiver_pwm_watchdog(ble_receiver_t *p_receiver)
-{
-  ble_receiver_pwm_set_failsafe(p_receiver);
-}
-#endif
-
 uint32_t ble_receiver_pwm_init(ble_receiver_t *p_receiver,ble_receiver_init_t *p_receiver_init)
 {
   nrf_drv_pwm_config_t pwm_config = {
@@ -504,17 +523,26 @@ uint32_t ble_receiver_init(ble_receiver_t * p_receiver, ble_receiver_init_t *p_r
 
     // Add device id charactersistic
     err_code = receiver_deviceid_char_add(p_receiver, p_receiver_init);
-    if (err_code != NRF_SUCCESS)
-    {
-        return err_code;
-    }
+    APP_ERROR_CHECK(err_code);
 
     // Add heartbeat charactersistic
-    err_code = receiver_heartbeat_char_add(p_receiver, p_receiver_init);
-    if (err_code != NRF_SUCCESS)
-    {
-        return err_code;
-    }
+    err_code = receiver_write_char_add(p_receiver,
+				       p_receiver_init,
+				       BLE_UUID_HEART_RATE_MEASUREMENT_CHAR,
+				       &p_receiver->heartbeat_handles);
+    APP_ERROR_CHECK(err_code);
+    // Add gpio charactersistic
+    err_code = receiver_write_char_add(p_receiver,
+				       p_receiver_init,
+				       BLE_UUID_BLOOD_PRESSURE_SERVICE,
+				       &p_receiver->gpio_handles);
+    APP_ERROR_CHECK(err_code);
+    // Add pwm charactersistic
+    err_code = receiver_write_char_add(p_receiver,
+				       p_receiver_init,
+				       BLE_UUID_GLUCOSE_SERVICE,
+				       &p_receiver->pwm_handles);
+    APP_ERROR_CHECK(err_code);
 
 #if 0
     // Add Sensor Location characteristic (optional)

@@ -101,6 +101,9 @@ struct ble_receiver_s
     ble_receiver_evt_handler_t       evt_handler;                           /**< Event handler to be called for handling events in the Cycling Speed and Cadence Service. */
     uint16_t                     service_handle;                        /**< Handle of Cycling Speed and Cadence Service (as provided by the BLE stack). */
     ble_gatts_char_handles_t     deviceid_handles;
+    ble_gatts_char_handles_t     heartbeat_handles;
+    ble_gatts_char_handles_t     gpio_handles;
+    ble_gatts_char_handles_t     pwm_handles;
     uint16_t                     conn_handle;                           /**< Handle of the current connection (as provided by the BLE stack, is BLE_CONN_HANDLE_INVALID if not in a connection). */
 
     const receiver_device_config_t *config;
