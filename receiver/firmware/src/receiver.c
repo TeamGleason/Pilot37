@@ -22,7 +22,7 @@
  * 4. This software, with or without modification, must only be used with a
  *    Nordic Semiconductor ASA integrated circuit.
  * 
- * 5. Any software provided in binary form under this license must not be reverse
+ * 5. Any software provided in binary form under this license must not be reverssed
  *    engineered, decompiled, modified and/or disassembled.
  * 
  * THIS SOFTWARE IS PROVIDED BY NORDIC SEMICONDUCTOR ASA "AS IS" AND ANY EXPRESS
@@ -48,6 +48,8 @@
 #include "ble.h"
 #include "ble_srv_common.h"
 #include "app_util.h"
+#include "nrf_gpio.h"
+#include "nrf_drv_pwm.h"
 
 #define OPCODE_LENGTH 1                                                             /**< Length of opcode inside Cycling Speed and Cadence Measurement packet. */
 #define HANDLE_LENGTH 2                                                             /**< Length of handle inside Cycling Speed and Cadence Measurement packet. */
@@ -57,6 +59,7 @@
 #define CSC_MEAS_FLAG_MASK_WHEEL_REV_DATA_PRESENT (0x01 << 0)  /**< Wheel revolution data present flag bit. */
 #define CSC_MEAS_FLAG_MASK_CRANK_REV_DATA_PRESENT (0x01 << 1)  /**< Crank revolution data present flag bit. */
 
+nrf_drv_pwm_t g_pwm_instance = NRF_DRV_PWM_INSTANCE(0);
 
 /**@brief Function for handling the Connect event.
  *
@@ -80,7 +83,7 @@ static void on_disconnect(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
     p_receiver->conn_handle = BLE_CONN_HANDLE_INVALID;
 }
 
-
+#if NOT_YET
 /**@brief Function for handling write events to the RECEIVER Measurement characteristic.
  *
  * @param[in]   p_receiver        Cycling Speed and Cadence Service structure.
@@ -108,7 +111,7 @@ static void on_meas_cccd_write(ble_receiver_t * p_receiver, ble_gatts_evt_write_
         }
     }
 }
-
+#endif
 
 /**@brief Function for handling the Write event.
  *
@@ -117,12 +120,14 @@ static void on_meas_cccd_write(ble_receiver_t * p_receiver, ble_gatts_evt_write_
  */
 static void on_write(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
 {
+#if NOT_YET
     ble_gatts_evt_write_t * p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
 
     if (p_evt_write->handle == p_receiver->meas_handles.cccd_handle)
     {
         on_meas_cccd_write(p_receiver, p_evt_write);
     }
+#endif
 }
 
 
@@ -147,51 +152,7 @@ void ble_receiver_on_ble_evt(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
             break;
     }
 }
-
-
-/**@brief Function for encoding a RECEIVER Measurement.
- *
- * @param[in]   p_receiver              Cycling Speed and Cadence Service structure.
- * @param[in]   p_csc_measurement   Measurement to be encoded.
- * @param[out]  p_encoded_buffer    Buffer where the encoded data will be written.
- *
- * @return      Size of encoded data.
- */
-static uint8_t csc_measurement_encode(ble_receiver_t      * p_receiver,
-                                      ble_receiver_meas_t * p_csc_measurement,
-                                      uint8_t         * p_encoded_buffer)
-{
-    uint8_t flags = 0;
-    uint8_t len   = 1;
-
-    // Cumulative Wheel Revolutions and Last Wheel Event Time Fields
-    if (p_receiver->feature & BLE_RECEIVER_FEATURE_WHEEL_REV_BIT)
-    {
-        if (p_csc_measurement->is_wheel_rev_data_present)
-        {
-            flags |= CSC_MEAS_FLAG_MASK_WHEEL_REV_DATA_PRESENT;
-            len += uint32_encode(p_csc_measurement->cumulative_wheel_revs, &p_encoded_buffer[len]);
-            len += uint16_encode(p_csc_measurement->last_wheel_event_time, &p_encoded_buffer[len]);
-        }
-    }
-
-    // Cumulative Crank Revolutions and Last Crank Event Time Fields
-    if (p_receiver->feature & BLE_RECEIVER_FEATURE_CRANK_REV_BIT)
-    {
-        if (p_csc_measurement->is_crank_rev_data_present)
-        {
-            flags |= CSC_MEAS_FLAG_MASK_CRANK_REV_DATA_PRESENT;
-            len += uint16_encode(p_csc_measurement->cumulative_crank_revs, &p_encoded_buffer[len]);
-            len += uint16_encode(p_csc_measurement->last_crank_event_time, &p_encoded_buffer[len]);
-        }
-    }
-
-    // Flags Field
-    p_encoded_buffer[0] = flags;
-
-    return len;
-}
-
+#if NOT_YET
 
 /**@brief Function for adding CSC Measurement characteristics.
  *
@@ -250,22 +211,21 @@ static uint32_t csc_measurement_char_add(ble_receiver_t * p_receiver, const ble_
                                            &attr_char_value,
                                            &p_receiver->meas_handles);
 }
+#endif
 
-
-/**@brief Function for adding CSC Feature characteristics.
+/**@brief Function for adding receiver device id characteristics.
  *
- * @param[in]   p_receiver        Cycling Speed and Cadence Service structure.
+ * @param[in]   p_receiver        Receiver Service structure.
  * @param[in]   p_receiver_init   Information needed to initialize the service.
  *
  * @return      NRF_SUCCESS on success, otherwise an error code.
  */
-static uint32_t csc_feature_char_add(ble_receiver_t * p_receiver, const ble_receiver_init_t * p_receiver_init)
+static uint32_t receiver_deviceid_char_add(ble_receiver_t * p_receiver, const ble_receiver_init_t * p_receiver_init)
 {
     ble_gatts_char_md_t char_md;
     ble_gatts_attr_t    attr_char_value;
     ble_uuid_t          ble_uuid;
     ble_gatts_attr_md_t attr_md;
-    uint8_t             init_value_encoded[2];
     uint8_t             init_value_len;
 
     memset(&char_md, 0, sizeof(char_md));
@@ -281,8 +241,7 @@ static uint32_t csc_feature_char_add(ble_receiver_t * p_receiver, const ble_rece
 
     memset(&attr_md, 0, sizeof(attr_md));
 
-    attr_md.read_perm  = p_receiver_init->csc_feature_attr_md.read_perm;
-
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.read_perm);  
     BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&attr_md.write_perm);
     attr_md.vloc       = BLE_GATTS_VLOC_STACK;
     attr_md.rd_auth    = 0;
@@ -291,89 +250,103 @@ static uint32_t csc_feature_char_add(ble_receiver_t * p_receiver, const ble_rece
 
     memset(&attr_char_value, 0, sizeof(attr_char_value));
 
-    init_value_len = uint16_encode(p_receiver_init->feature, &init_value_encoded[0]);
+    init_value_len = strlen(p_receiver_init->config->device_identifier);
 
     attr_char_value.p_uuid    = &ble_uuid;
     attr_char_value.p_attr_md = &attr_md;
     attr_char_value.init_len  = init_value_len;
     attr_char_value.init_offs = 0;
     attr_char_value.max_len   = init_value_len;
-    attr_char_value.p_value   = init_value_encoded;
+    attr_char_value.p_value   = (void *)p_receiver_init->config->device_identifier;
 
     return sd_ble_gatts_characteristic_add(p_receiver->service_handle,
                                            &char_md,
                                            &attr_char_value,
-                                           &p_receiver->feature_handles);
+                                           &p_receiver->deviceid_handles);
 }
 
-
-/**@brief Function for adding CSC Sensor Location characteristic.
- *
- * @param[in]   p_receiver        Cycling Speed and Cadence Service structure.
- * @param[in]   p_receiver_init   Information needed to initialize the service.
- *
- * @return      NRF_SUCCESS on success, otherwise an error code.
- */
-static uint32_t csc_sensor_loc_char_add(ble_receiver_t * p_receiver, const ble_receiver_init_t * p_receiver_init)
+void ble_receiver_gpio_set(ble_receiver_t *p_receiver, gpio_value *vals)
 {
-    ble_gatts_char_md_t char_md;
-    ble_gatts_attr_t    attr_char_value;
-    ble_uuid_t          ble_uuid;
-    ble_gatts_attr_md_t attr_md;
-    uint8_t             init_value_len;
-    uint8_t             encoded_init_value[1];
+  for (int i = 0; p_receiver->config->gpios_count; i++,vals++) {
+    nrf_gpio_pin_write(p_receiver->config->gpios[i].pin,
+		       *vals);
+  }
+}
 
-    memset(&char_md, 0, sizeof(char_md));
+void ble_receiver_gpio_init(ble_receiver_t *p_receiver,ble_receiver_init_t *p_receiver_init)
+{
+  gpio_value vals[32];
 
-    char_md.char_props.read  = 1;
-    char_md.p_char_user_desc = NULL;
-    char_md.p_char_pf        = NULL;
-    char_md.p_user_desc_md   = NULL;
-    char_md.p_cccd_md        = NULL;
-    char_md.p_sccd_md        = NULL;
+  if (p_receiver_init->config->gpios_count == 0) {
+    return;
+  }
 
-    BLE_UUID_BLE_ASSIGN(ble_uuid, BLE_UUID_SENSOR_LOCATION_CHAR);
+  for (int i = 0; i < p_receiver_init->config->gpios_count; i++) {
+    nrf_gpio_cfg_output(p_receiver_init->config->gpios[i].pin);
+    vals[i] = p_receiver_init->config->gpios[i].failsafe_value;
+  }
 
-    memset(&attr_md, 0, sizeof(attr_md));
+  ble_receiver_gpio_set(p_receiver, vals);
+}
 
-    attr_md.read_perm  = p_receiver_init->csc_sensor_loc_attr_md.read_perm;
-    BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&attr_md.write_perm);
-    attr_md.vloc       = BLE_GATTS_VLOC_STACK;
-    attr_md.rd_auth    = 0;
-    attr_md.wr_auth    = 0;
-    attr_md.vlen       = 0;
-
-    memset(&attr_char_value, 0, sizeof(attr_char_value));
-
-    init_value_len = sizeof(uint8_t);
-    if (p_receiver_init->sensor_location != NULL)
-    {
-        encoded_init_value[0] = *p_receiver_init->sensor_location;
-    }
-
-    attr_char_value.p_uuid    = &ble_uuid;
-    attr_char_value.p_attr_md = &attr_md;
-    attr_char_value.init_len  = init_value_len;
-    attr_char_value.init_offs = 0;
-    attr_char_value.max_len   = init_value_len;
-    attr_char_value.p_value   = encoded_init_value;
-
-    return sd_ble_gatts_characteristic_add(p_receiver->service_handle,
-                                           &char_md,
-                                           &attr_char_value,
-                                           &p_receiver->sensor_loc_handles);
+void ble_receiver_pwm_set(ble_receiver_t *p_receiver, pwm_value *vals)
+{
 }
 
 
-uint32_t ble_receiver_init(ble_receiver_t * p_receiver, const ble_receiver_init_t * p_receiver_init)
+
+
+uint32_t ble_receiver_pwm_init(ble_receiver_t *p_receiver,ble_receiver_init_t *p_receiver_init)
+{
+  pwm_value vals[4];
+  nrf_drv_pwm_config_t pwm_config;
+  uint32_t             err_code;
+  int pwm_count;
+
+  if (p_receiver_init->config->pwm_count == 0) {
+    return NRF_SUCCESS;
+  }
+
+  // XXXX need to write other data into pwm_config
+
+  pwm_count = p_receiver_init->config->pwm_count;
+  if (pwm_count > 4) {
+    pwm_count = 4;
+  }
+
+  for (int i = 0; i < 4; i++) {
+    if (i < pwm_count) {
+      pwm_config.output_pins[i] = p_receiver_init->config->pwms[i].pin;
+      vals[i] = p_receiver_init->config->pwms[i].failsafe_value;
+    } else {
+      pwm_config.output_pins[i] = NRF_DRV_PWM_PIN_NOT_USED;
+    }
+  }
+
+  err_code = nrf_drv_pwm_init(&g_pwm_instance, &pwm_config, NULL);
+  APP_ERROR_CHECK(err_code);
+  
+  ble_receiver_pwm_set(p_receiver, vals);
+
+  return NRF_SUCCESS;
+}
+
+
+
+uint32_t ble_receiver_init(ble_receiver_t * p_receiver, ble_receiver_init_t *p_receiver_init)
 {
     uint32_t             err_code;
     ble_uuid_t           ble_uuid;
 
+    ble_receiver_gpio_init(p_receiver, p_receiver_init);
+    ble_receiver_pwm_init(p_receiver, p_receiver_init);
+
     // Initialize service structure
+#if NOT_YET
     p_receiver->evt_handler = p_receiver_init->evt_handler;
+#endif
     p_receiver->conn_handle = BLE_CONN_HANDLE_INVALID;
-    p_receiver->feature     = p_receiver_init->feature;
+    p_receiver->config      = p_receiver_init->config;
 
     // Add service
     BLE_UUID_BLE_ASSIGN(ble_uuid, BLE_UUID_CYCLING_SPEED_AND_CADENCE);
@@ -387,22 +360,14 @@ uint32_t ble_receiver_init(ble_receiver_t * p_receiver, const ble_receiver_init_
         return err_code;
     }
 
-    // Add cycling speed and cadence measurement characteristic
-    err_code = csc_measurement_char_add(p_receiver, p_receiver_init);
-
+    // Add device id charactersistic
+    err_code = receiver_deviceid_char_add(p_receiver, p_receiver_init);
     if (err_code != NRF_SUCCESS)
     {
         return err_code;
     }
 
-    // Add cycling speed and cadence feature characteristic
-    err_code = csc_feature_char_add(p_receiver, p_receiver_init);
-
-    if (err_code != NRF_SUCCESS)
-    {
-        return err_code;
-    }
-
+#if 0
     // Add Sensor Location characteristic (optional)
     if (p_receiver_init->sensor_location != NULL)
     {
@@ -413,9 +378,11 @@ uint32_t ble_receiver_init(ble_receiver_t * p_receiver, const ble_receiver_init_
             return err_code;
         }
     }
+#endif
     return NRF_SUCCESS;
 }
 
+#if NOT_YET
 
 uint32_t ble_receiver_measurement_send(ble_receiver_t * p_receiver, ble_receiver_meas_t * p_measurement)
 {
@@ -453,3 +420,4 @@ uint32_t ble_receiver_measurement_send(ble_receiver_t * p_receiver, ble_receiver
 
     return err_code;
 }
+#endif

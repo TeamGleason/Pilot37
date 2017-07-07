@@ -46,6 +46,7 @@
 #include "ble.h"
 #include "ble_srv_common.h"
 #include "ble_sensor_location.h"
+#include "config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,6 +83,7 @@ typedef void (*ble_receiver_evt_handler_t) (ble_receiver_t * p_receiver, ble_rec
 typedef struct
 {
     ble_receiver_evt_handler_t       evt_handler;                           /**< Event handler to be called for handling events in the Cycling Speed and Cadence Service. */
+    const receiver_device_config_t *config;
     ble_srv_cccd_security_mode_t csc_meas_attr_md;                      /**< Initial security level for cycling speed and cadence measurement attribute */
     ble_srv_security_mode_t      csc_feature_attr_md;                   /**< Initial security level for feature attribute */
     uint16_t                     feature;                               /**< Initial value for features of sensor @ref BLE_RECEIVER_FEATURES. */
@@ -98,11 +100,10 @@ struct ble_receiver_s
 {
     ble_receiver_evt_handler_t       evt_handler;                           /**< Event handler to be called for handling events in the Cycling Speed and Cadence Service. */
     uint16_t                     service_handle;                        /**< Handle of Cycling Speed and Cadence Service (as provided by the BLE stack). */
-    ble_gatts_char_handles_t     meas_handles;                          /**< Handles related to the Cycling Speed and Cadence Measurement characteristic. */
-    ble_gatts_char_handles_t     feature_handles;                       /**< Handles related to the Cycling Speed and Cadence feature characteristic. */
-    ble_gatts_char_handles_t     sensor_loc_handles;                    /**< Handles related to the Cycling Speed and Cadence Sensor Location characteristic. */
+    ble_gatts_char_handles_t     deviceid_handles;
     uint16_t                     conn_handle;                           /**< Handle of the current connection (as provided by the BLE stack, is BLE_CONN_HANDLE_INVALID if not in a connection). */
-    uint16_t                     feature;                               /**< Bit mask of features available on sensor. */
+
+    const receiver_device_config_t *config;
 };
 
 /**@brief Cycling Speed and Cadence Service measurement structure. This contains a Cycling Speed and
@@ -126,7 +127,7 @@ typedef struct ble_receiver_meas_s
  *
  * @return      NRF_SUCCESS on successful initialization of service, otherwise an error code.
  */
-uint32_t ble_receiver_init(ble_receiver_t * p_receiver, const ble_receiver_init_t * p_receiver_init);
+uint32_t ble_receiver_init(ble_receiver_t * p_receiver, ble_receiver_init_t *init);
 
 /**@brief Function for handling the Application's BLE Stack events.
  *

@@ -351,17 +351,21 @@ static void gatt_init(void)
 static void services_init(void)
 {
     uint32_t              err_code;
-    ble_receiver_init_t       receiver_init;
+    ble_receiver_init_t   receiver_init;
     ble_bas_init_t        bas_init;
     ble_dis_init_t        dis_init;
 
-    // Initialize Cycling Speed and Cadence Service.
+    // Initialize Receiver Service.
     memset(&receiver_init, 0, sizeof(receiver_init));
 
     receiver_init.evt_handler = NULL;
+    receiver_init.config = &device_config;
 
-    // Here the sec level for the Cycling Speed and Cadence Service can be changed/increased.
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&receiver_init.csc_meas_attr_md.cccd_write_perm);   // for the measurement characteristic, only the CCCD write permission can be set by the application, others are mandated by service specification
+    //
+    // Receiver characteristic permissions are driven in the custom
+    // service implementation
+    //
+
     err_code = ble_receiver_init(&m_receiver, &receiver_init);
     APP_ERROR_CHECK(err_code);
 
@@ -465,7 +469,7 @@ static void conn_params_init(void)
     connection_params_init.first_conn_params_update_delay = FIRST_CONN_PARAMS_UPDATE_DELAY;
     connection_params_init.next_conn_params_update_delay  = NEXT_CONN_PARAMS_UPDATE_DELAY;
     connection_params_init.max_conn_params_update_count   = MAX_CONN_PARAMS_UPDATE_COUNT;
-    connection_params_init.start_on_notify_cccd_handle    = m_receiver.meas_handles.cccd_handle;
+    connection_params_init.start_on_notify_cccd_handle    = BLE_GATT_HANDLE_INVALID;
     connection_params_init.disconnect_on_fail             = false;
     connection_params_init.evt_handler                    = on_conn_params_evt;
     connection_params_init.error_handler                  = conn_params_error_handler;

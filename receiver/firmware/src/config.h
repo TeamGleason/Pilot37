@@ -5,6 +5,7 @@
 #define CONFIG_H 1
 
 typedef bool gpio_value;
+typedef uint16_t pwm_value;
 
 struct receiver_gpio_config {
   uint32_t pin;
@@ -17,14 +18,14 @@ struct receiver_pwm_config {
   gpio_value failsafe_value;
 };
 
-struct receiver_device_config { 
+typedef struct { 
   char *device_identifier;
   int gpios_count;
   const struct receiver_gpio_config *gpios;
   int pwm_count;  
   const struct receiver_pwm_config *pwms;
-};
+} receiver_device_config_t;
 
-extern const struct receiver_device_config device_config;
+extern const receiver_device_config_t device_config;
 
 #endif 
