@@ -104,6 +104,7 @@ struct ble_receiver_s
     uint16_t                     conn_handle;                           /**< Handle of the current connection (as provided by the BLE stack, is BLE_CONN_HANDLE_INVALID if not in a connection). */
 
     const receiver_device_config_t *config;
+    int pwm_count;
 };
 
 /**@brief Cycling Speed and Cadence Service measurement structure. This contains a Cycling Speed and
