@@ -139,9 +139,12 @@ static void on_write(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
     {
         on_meas_cccd_write(p_receiver, p_evt_write);
     }
+    else if
 #endif
+    if (p_evt_write->handle == p_receiver->heartbeat_handles.value_handle) {
+      ble_receiver_heartbeat_received(p_receiver);
+    } 
 }
-
 
 void ble_receiver_on_ble_evt(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
 {
@@ -275,6 +278,49 @@ static uint32_t receiver_deviceid_char_add(ble_receiver_t * p_receiver, const bl
                                            &char_md,
                                            &attr_char_value,
                                            &p_receiver->deviceid_handles);
+}
+
+static uint32_t receiver_heartbeat_char_add(ble_receiver_t * p_receiver, const ble_receiver_init_t * p_receiver_init)
+{
+    ble_gatts_char_md_t char_md;
+    ble_gatts_attr_t    attr_char_value;
+    ble_uuid_t          ble_uuid;
+    ble_gatts_attr_md_t attr_md;
+
+    memset(&char_md, 0, sizeof(char_md));
+
+    char_md.char_props.write_wo_resp = 1;
+    char_md.p_char_user_desc         = NULL;
+    char_md.p_char_pf                = NULL;
+    char_md.p_user_desc_md           = NULL;
+    char_md.p_cccd_md                = NULL;
+    char_md.p_sccd_md                = NULL;
+
+    ble_uuid.type = p_receiver->uuid_type;
+    ble_uuid.uuid = BLE_UUID_NUS_RX_CHARACTERISTIC;
+
+    memset(&attr_md, 0, sizeof(attr_md));
+
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.write_perm);
+
+    attr_md.vloc    = BLE_GATTS_VLOC_STACK;
+    attr_md.rd_auth = 0;
+    attr_md.wr_auth = 0;
+    attr_md.vlen    = 1;
+
+    memset(&attr_char_value, 0, sizeof(attr_char_value));
+
+    attr_char_value.p_uuid    = &ble_uuid;
+    attr_char_value.p_attr_md = &attr_md;
+    attr_char_value.init_len  = 1;
+    attr_char_value.init_offs = 0;
+    attr_char_value.max_len   = 1;
+
+    return sd_ble_gatts_characteristic_add(p_receiver->service_handle,
+                                           &char_md,
+                                           &attr_char_value,
+                                           &p_receiver->heartbeat_handles);
 }
 
 void ble_receiver_gpio_set(ble_receiver_t *p_receiver, gpio_value *vals)
@@ -458,6 +504,13 @@ uint32_t ble_receiver_init(ble_receiver_t * p_receiver, ble_receiver_init_t *p_r
 
     // Add device id charactersistic
     err_code = receiver_deviceid_char_add(p_receiver, p_receiver_init);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    // Add heartbeat charactersistic
+    err_code = receiver_heartbeat_char_add(p_receiver, p_receiver_init);
     if (err_code != NRF_SUCCESS)
     {
         return err_code;
