@@ -224,6 +224,7 @@ void ble_receiver_heartbeat_received(ble_receiver_t *p_receiver)
 // * new PWM step down sequence
 // * more tolerance for missed hearbeats
 // * restart oneshot on heartbeat receive (stop existing, start new)
+// * treat all input as heartbeat reception
 //
 
 void ble_receiver_watchdog_handler(void *p_context)
