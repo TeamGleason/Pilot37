@@ -887,8 +887,6 @@ int main(void)
     peer_manager_init();
 
     // Start execution.
-    NRF_LOG_INFO("Cycling Speed and Cadence example started.\r\n");
-
     application_timers_start();
     advertising_start(erase_bonds);
 

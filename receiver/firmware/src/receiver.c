@@ -51,6 +51,7 @@
 #include "nrf_gpio.h"
 #include "nrf_drv_pwm.h"
 #include "app_util_platform.h"
+#include "app_timer.h"
 
 // XXX all guids are temporary
 
@@ -58,9 +59,9 @@
 #define HANDLE_LENGTH 2                                                             /**< Length of handle inside Cycling Speed and Cadence Measurement packet. */
 #define MAX_CSCM_LEN  (BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH - HANDLE_LENGTH)    /**< Maximum size of a transmitted Cycling Speed and Cadence Measurement. */
 
-// Cycling Speed and Cadence Measurement flag bits
-#define CSC_MEAS_FLAG_MASK_WHEEL_REV_DATA_PRESENT (0x01 << 0)  /**< Wheel revolution data present flag bit. */
-#define CSC_MEAS_FLAG_MASK_CRANK_REV_DATA_PRESENT (0x01 << 1)  /**< Crank revolution data present flag bit. */
+#define BLE_RECEIVER_WATCHDOG_TICKS APP_TIMER_TICKS(1000)
+
+// XXX should all be part of the receiver struct
 
 nrf_drv_pwm_t g_pwm_instance = NRF_DRV_PWM_INSTANCE(0);
 nrf_pwm_values_individual_t g_pwm_seq_values;
@@ -75,6 +76,10 @@ nrf_pwm_sequence_t const g_pwm_seq = {
 
 bool g_pwm_new_values = false;
 
+bool g_outstanding_watchdog = false;
+bool g_heartbeat_received = false;
+
+APP_TIMER_DEF(g_watchdog_timer_id);
 
 void ble_receiver_gpio_set(ble_receiver_t *p_receiver, gpio_value *vals)
 {
@@ -86,6 +91,10 @@ void ble_receiver_gpio_set(ble_receiver_t *p_receiver, gpio_value *vals)
 
 void ble_receiver_gpio_set_validate(ble_receiver_t *p_receiver, uint8_t * p_data, uint16_t length)
 {
+  if (length != (p_receiver->config->gpios_count * sizeof(gpio_value))) {
+    return;
+  }
+  ble_receiver_gpio_set(p_receiver, (gpio_value *) p_data);
 }
 void ble_receiver_gpio_set_failsafe(ble_receiver_t *p_receiver)
 {
@@ -125,8 +134,11 @@ void ble_receiver_pwm_set(ble_receiver_t *p_receiver, pwm_value *vals)
 
 void ble_receiver_pwm_set_validate(ble_receiver_t *p_receiver, uint8_t * p_data, uint16_t length)
 {
+  if (length != (p_receiver->config->pwm_count * sizeof(pwm_value))) {
+    return;
+  }
+  ble_receiver_pwm_set(p_receiver, (pwm_value *) p_data);
 }
-
 
 void ble_receiver_pwm_update(void)
 {
@@ -180,17 +192,54 @@ void ble_receiver_pwm_set_failsafe(ble_receiver_t *p_receiver)
   ble_receiver_pwm_set(p_receiver, vals);
 }
 
-#if NOT_YET
-void ble_receiver_pwm_watchdog(ble_receiver_t *p_receiver)
+// XXX synchronization problems? 
+void ble_receiver_watchdog(ble_receiver_t *p_receiver)
 {
   ble_receiver_pwm_set_failsafe(p_receiver);
+  ble_receiver_gpio_set_failsafe(p_receiver);
 }
-#endif
+
+void ble_receiver_start_watchdog(ble_receiver_t *p_receiver)
+{
+  if (g_outstanding_watchdog == false) {
+    g_outstanding_watchdog = true;
+    app_timer_start(g_watchdog_timer_id, BLE_RECEIVER_WATCHDOG_TICKS, p_receiver);
+  }
+}
+
 
 void ble_receiver_heartbeat_received(ble_receiver_t *p_receiver)
 {
+  g_heartbeat_received = true;
 }
 
+//
+// Simplistic watchdog/failsafe logic.
+// * When connected, issue watchdog timer oneshot.
+// * If watchdog event occurs, check for heartbeat, otherwise failsafe.
+// * If watchdog event occurs and connected, issue new oneshot.
+// * On disconnect event, issue oneshot.
+//
+// Potential improvements:
+// * new PWM step down sequence
+// * more tolerance for missed hearbeats
+// * restart oneshot on heartbeat receive (stop existing, start new)
+//
+
+void ble_receiver_watchdog_handler(void *p_context)
+{
+  ble_receiver_t *p_receiver = p_context;
+
+  if (g_heartbeat_received != true) {
+    ble_receiver_watchdog(p_receiver);
+  }
+  g_heartbeat_received = false;
+  g_outstanding_watchdog = false;
+
+  if (p_receiver->conn_handle != BLE_CONN_HANDLE_INVALID) {
+    ble_receiver_start_watchdog(p_receiver);
+  }
+}
 
 /**@brief Function for handling the Connect event.
  *
@@ -200,6 +249,7 @@ void ble_receiver_heartbeat_received(ble_receiver_t *p_receiver)
 static void on_connect(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
 {
     p_receiver->conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+    ble_receiver_start_watchdog(p_receiver);
 }
 
 
@@ -212,6 +262,7 @@ static void on_disconnect(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
 {
     UNUSED_PARAMETER(p_ble_evt);
     p_receiver->conn_handle = BLE_CONN_HANDLE_INVALID;
+    ble_receiver_start_watchdog(p_receiver);
 }
 
 #if NOT_YET
@@ -501,6 +552,11 @@ uint32_t ble_receiver_init(ble_receiver_t * p_receiver, ble_receiver_init_t *p_r
 
     ble_receiver_gpio_init(p_receiver, p_receiver_init);
     ble_receiver_pwm_init(p_receiver, p_receiver_init);
+    
+    // Create watchdog timer
+    err_code = app_timer_create(&g_watchdog_timer_id,
+                                APP_TIMER_MODE_SINGLE_SHOT,
+                                ble_receiver_watchdog_handler);
 
     // Initialize service structure
 #if NOT_YET
