@@ -551,6 +551,7 @@ uint32_t ble_receiver_init(ble_receiver_t * p_receiver, ble_receiver_init_t *p_r
     uint32_t             err_code;
     ble_uuid_t           ble_uuid;
 
+#if NOT_YET
     ble_receiver_gpio_init(p_receiver, p_receiver_init);
     ble_receiver_pwm_init(p_receiver, p_receiver_init);
     
@@ -558,6 +559,7 @@ uint32_t ble_receiver_init(ble_receiver_t * p_receiver, ble_receiver_init_t *p_r
     err_code = app_timer_create(&g_watchdog_timer_id,
                                 APP_TIMER_MODE_SINGLE_SHOT,
                                 ble_receiver_watchdog_handler);
+#endif
 
     // Initialize service structure
 #if NOT_YET

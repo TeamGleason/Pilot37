@@ -351,9 +351,10 @@ static void gatt_init(void)
 static void services_init(void)
 {
     uint32_t              err_code;
-    ble_receiver_init_t   receiver_init;
     ble_bas_init_t        bas_init;
     ble_dis_init_t        dis_init;
+
+    ble_receiver_init_t   receiver_init;
 
     // Initialize Receiver Service.
     memset(&receiver_init, 0, sizeof(receiver_init));
@@ -818,6 +819,8 @@ static void advertising_init(void)
 static void buttons_leds_init(bool * p_erase_bonds)
 {
     ret_code_t err_code;
+
+#if BUTTONS_NUMBER > 0
     bsp_event_t startup_event;
 
     err_code = bsp_init(BSP_INIT_LED | BSP_INIT_BUTTONS, bsp_event_handler);
@@ -825,8 +828,13 @@ static void buttons_leds_init(bool * p_erase_bonds)
 
     err_code = bsp_btn_ble_init(NULL, &startup_event);
     APP_ERROR_CHECK(err_code);
-
     *p_erase_bonds = (startup_event == BSP_EVENT_CLEAR_BONDING_DATA);
+#else
+    err_code = bsp_init(BSP_INIT_LED, bsp_event_handler);
+    APP_ERROR_CHECK(err_code);
+
+    *p_erase_bonds = false;
+#endif
 }
 
 

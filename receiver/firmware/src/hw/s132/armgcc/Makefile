@@ -177,7 +177,7 @@ LIB_FILES += \
 
 # C flags common to all targets
 CFLAGS += -DBLE_STACK_SUPPORT_REQD
-CFLAGS += -DBOARD_PCA10040
+CFLAGS += -DBOARD_CUSTOM
 CFLAGS += -DCONFIG_GPIO_AS_PINRESET
 CFLAGS += -DNRF52
 CFLAGS += -DNRF52832_XXAA
@@ -215,7 +215,7 @@ CXXFLAGS += \
 # Assembler flags common to all targets
 ASMFLAGS += -x assembler-with-cpp
 ASMFLAGS += -DBLE_STACK_SUPPORT_REQD
-ASMFLAGS += -DBOARD_PCA10040
+ASMFLAGS += -DBOARD_CUSTOM
 ASMFLAGS += -DCONFIG_GPIO_AS_PINRESET
 ASMFLAGS += -DNRF52
 ASMFLAGS += -DNRF52832_XXAA
@@ -264,14 +264,14 @@ $(foreach target, $(TARGETS), $(call define_target, $(target)))
 # Flash the program
 flash: $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex
 	@echo Flashing: $<
-	$(NRF_TOOLS)/nrfjprog --program $< -f nrf52 --sectorerase
-	$(NRF_TOOLS)/nrfjprog --reset -f nrf52
+	$(NRF_TOOLS)/nrfjprog/nrfjprog --program $< -f nrf52 --sectorerase
+	$(NRF_TOOLS)/nrfjprog/nrfjprog --reset -f nrf52
 
 # Flash softdevice
 flash_softdevice:
 	@echo Flashing: s132_nrf52_4.0.2_softdevice.hex
-	$(NRF_TOOLS)/nrfjprog --program $(SDK_ROOT)/components/softdevice/s132/hex/s132_nrf52_4.0.2_softdevice.hex -f nrf52 --sectorerase 
-	$(NRF_TOOLS)/nrfjprog --reset -f nrf52
+	$(NRF_TOOLS)/nrfjprog/nrfjprog --program $(SDK_ROOT)/components/softdevice/s132/hex/s132_nrf52_4.0.2_softdevice.hex -f nrf52 --sectorerase 
+	$(NRF_TOOLS)/nrfjprog/nrfjprog --reset -f nrf52
 
 erase:
-	$(NRF_TOOLS)/nrfjprog --eraseall -f nrf52
+	$(NRF_TOOLS)/nrfjprog/nrfjprog --eraseall -f nrf52
