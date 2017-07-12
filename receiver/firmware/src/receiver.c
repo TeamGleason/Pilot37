@@ -83,9 +83,8 @@ APP_TIMER_DEF(g_watchdog_timer_id);
 
 void ble_receiver_gpio_set(ble_receiver_t *p_receiver, gpio_value *vals)
 {
-  for (int i = 0; p_receiver->config->gpios_count; i++,vals++) {
-    nrf_gpio_pin_write(p_receiver->config->gpios[i].pin,
-		       *vals);
+  for (int i = 0; i < p_receiver->config->gpios_count; i++) {
+    nrf_gpio_pin_write(p_receiver->config->gpios[i].pin, vals[i]);
   }
 }
 
@@ -100,26 +99,21 @@ void ble_receiver_gpio_set_failsafe(ble_receiver_t *p_receiver)
 {
   gpio_value vals[32];
 
-  for (int i = 0; p_receiver->config->gpios_count; i++) {
+  for (int i = 0; i < p_receiver->config->gpios_count; i++) {
     vals[i]= p_receiver->config->gpios[i].failsafe_value;
   }
   ble_receiver_gpio_set(p_receiver, vals);
 }
 
-void ble_receiver_gpio_init(ble_receiver_t *p_receiver,ble_receiver_init_t *p_receiver_init)
-{
-  gpio_value vals[32];
-
-  if (p_receiver_init->config->gpios_count == 0) {
+void ble_receiver_gpio_init(ble_receiver_t *p_receiver) {
+  if (p_receiver->config->gpios_count == 0) {
     return;
   }
 
-  for (int i = 0; i < p_receiver_init->config->gpios_count; i++) {
-    nrf_gpio_cfg_output(p_receiver_init->config->gpios[i].pin);
-    vals[i] = p_receiver_init->config->gpios[i].failsafe_value;
+  for (int i = 0; i < p_receiver->config->gpios_count; i++) {
+    nrf_gpio_cfg_output(p_receiver->config->gpios[i].pin);
   }
-
-  ble_receiver_gpio_set(p_receiver, vals);
+  ble_receiver_gpio_set_failsafe(p_receiver);
 }
 
 void ble_receiver_pwm_set(ble_receiver_t *p_receiver, pwm_value *vals)
@@ -195,7 +189,10 @@ void ble_receiver_pwm_set_failsafe(ble_receiver_t *p_receiver)
 // XXX synchronization problems? 
 void ble_receiver_watchdog(ble_receiver_t *p_receiver)
 {
+#if 0
   ble_receiver_pwm_set_failsafe(p_receiver);
+#endif
+
   ble_receiver_gpio_set_failsafe(p_receiver);
 }
 
@@ -551,22 +548,22 @@ uint32_t ble_receiver_init(ble_receiver_t * p_receiver, ble_receiver_init_t *p_r
     uint32_t             err_code;
     ble_uuid_t           ble_uuid;
 
-#if NOT_YET
-    ble_receiver_gpio_init(p_receiver, p_receiver_init);
-    ble_receiver_pwm_init(p_receiver, p_receiver_init);
-    
-    // Create watchdog timer
-    err_code = app_timer_create(&g_watchdog_timer_id,
-                                APP_TIMER_MODE_SINGLE_SHOT,
-                                ble_receiver_watchdog_handler);
-#endif
-
     // Initialize service structure
 #if NOT_YET
     p_receiver->evt_handler = p_receiver_init->evt_handler;
 #endif
     p_receiver->conn_handle = BLE_CONN_HANDLE_INVALID;
     p_receiver->config      = p_receiver_init->config;
+
+    ble_receiver_gpio_init(p_receiver);
+#if NOT_YET
+    ble_receiver_pwm_init(p_receiver, p_receiver_init);
+#endif    
+
+    // Create watchdog timer
+    err_code = app_timer_create(&g_watchdog_timer_id,
+                                APP_TIMER_MODE_SINGLE_SHOT,
+                                ble_receiver_watchdog_handler);
 
     // Add service
     BLE_UUID_BLE_ASSIGN(ble_uuid, BLE_UUID_CYCLING_SPEED_AND_CADENCE);
