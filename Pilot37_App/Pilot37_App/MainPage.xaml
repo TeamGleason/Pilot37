@@ -1,0 +1,84 @@
+﻿<Page
+    x:Class="Pilot37_App.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Pilot37_App"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Name="ControlCanvas" Width="{Binding ActualWidth, ElementName=Canvas}" Height="{Binding ActualHeight, ElementName=Canvas}" Canvas.ZIndex="8">
+
+        <CaptureElement Name="PreviewControl" Stretch="Uniform"/>
+        <Grid Margin="100,0">
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="0.5*" />
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+
+            <Button x:Name="ForwardLeftButton" Opacity="0.4" Grid.Column="2" Content="^" Background="AliceBlue" FontFamily="./fonts/#FontAwesome" FontSize="64" Grid.RowSpan="4" Click="ForwardLeft_Click" Margin="0,0,30,0" Width="150" Height="150" HorizontalAlignment="Center" Grid.Row="4" Grid.ColumnSpan="2">
+                <Button.RenderTransform>
+                    <RotateTransform Angle="-45" />
+                </Button.RenderTransform>
+            </Button>
+            
+            <Button x:Name="ForwardRightButton" Opacity="0.4" Grid.Column="8" Content="^" Background="AliceBlue" FontFamily="./fonts/#FontAwesome" FontSize="64" Grid.ColumnSpan="3" Click="ForwardRight_Click" Margin="0,0,0,75" Width="150" Height="150" Grid.Row="3" Grid.RowSpan="4" HorizontalAlignment="Center">
+                <Button.RenderTransform>
+                    <RotateTransform Angle="45" />
+                </Button.RenderTransform>
+            </Button>
+
+            <Button x:Name="ForwardButton" Opacity="0.4" Grid.Row="2" Grid.Column="5" Content="^" Background="AliceBlue" FontFamily="./fonts/#FontAwesome" FontSize="64" Grid.ColumnSpan="2" Grid.RowSpan="3" Click="Forward_Click" Margin="0" Width="150" Height="150" HorizontalAlignment="Center">
+            </Button>
+            
+            <Button x:Name="BackwardLeftButton" Opacity="0.4" Grid.Row="9" Grid.Column="1" Content="&lt;" Background="AliceBlue" FontFamily="./fonts/#FontAwesome" FontSize="64" Grid.RowSpan="3" Click="BackwardLeft_Click" Margin="30,0,0,0" Grid.ColumnSpan="3" Width="150" Height="150" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Button.RenderTransform>
+                    <RotateTransform Angle="-45" />
+                </Button.RenderTransform>
+            </Button>
+            
+            <Button x:Name="BackwardRightButton" Opacity="0.4" Grid.Row="7" Grid.Column="8" Content="&gt;" Background="AliceBlue" FontFamily="./fonts/#FontAwesome" FontSize="64" Grid.RowSpan="3" Click="BackwardRight_Click" Margin="0" Grid.ColumnSpan="3" Width="150" Height="150" HorizontalAlignment="Center" VerticalAlignment="Bottom">
+                <Button.RenderTransform>
+                    <RotateTransform Angle="45" />
+                </Button.RenderTransform>
+            </Button>
+            
+            <Button x:Name="ReverseButton" Opacity="0.4" Grid.Row="10" Grid.Column="5" Content="v" Background="AliceBlue" FontFamily="./fonts/#FontAwesome" FontSize="64" Grid.ColumnSpan="2" Grid.RowSpan="3" Click="Reverse_Click" Margin="0" Width="150" Height="150" HorizontalAlignment="Center">
+            </Button>
+            <Button x:Name="StopButton" Opacity="0.4" Grid.Row="6" Grid.Column="5" Content="&#xf04d;" Background="AliceBlue" FontFamily="./fonts/#FontAwesome" FontSize="64" Grid.ColumnSpan="2" Grid.RowSpan="3" Click="Stop_Click" Margin="0" Width="150" Height="150" HorizontalAlignment="Center" VerticalAlignment="Center">
+            </Button>
+
+            <Button x:Name="TestButton" Opacity="0.4" Grid.Row="2" Grid.Column="0" Content="TEST" Background="Green" Foreground="White" FontFamily="Segoe UI Symbol" FontSize="28" Grid.RowSpan="2"  Click="TestButton_OnClick" Margin="0,0,0,30.667" VerticalAlignment="Bottom" Height="80" Width="80" />
+
+            <Button x:Name="SettingsButton" Opacity="0.4" Grid.Row="6" Grid.Column="0" Content="&#xe115;" Background="Blue" Foreground="Beige" FontFamily="Segoe UI Symbol" FontSize="48" Grid.RowSpan="2"  Click="Settings_Click" Visibility="Collapsed"/>
+
+        </Grid>
+    </Grid>
+</Page>
