@@ -47,6 +47,7 @@
 #include "nordic_common.h"
 #include "ble.h"
 #include "ble_srv_common.h"
+#include "bsp.h"
 #include "app_util.h"
 #include "nrf_gpio.h"
 #include "nrf_drv_pwm.h"
@@ -61,6 +62,8 @@
 
 #define BLE_RECEIVER_WATCHDOG_TICKS APP_TIMER_TICKS(1000)
 
+bool disable_failsafe = true;
+
 // XXX should all be part of the receiver struct
 
 nrf_drv_pwm_t g_pwm_instance = NRF_DRV_PWM_INSTANCE(0);
@@ -70,7 +73,7 @@ nrf_pwm_values_individual_t g_pwm_seq_values_new[1];
 nrf_pwm_sequence_t const g_pwm_seq = {
   .values.p_individual = g_pwm_seq_values,
   .length = NRF_PWM_VALUES_LENGTH(g_pwm_seq_values),
-  .repeats = 0,
+  .repeats = 10,
   .end_delay = 0
 };
 
@@ -154,10 +157,11 @@ void ble_receiver_pwm_set(ble_receiver_t *p_receiver, pwm_value *vals)
 
 void ble_receiver_pwm_set_validate(ble_receiver_t *p_receiver, uint8_t * p_data, uint16_t length)
 {
-  if (length != (p_receiver->config->pwm_count * sizeof(pwm_value))) {
+  bsp_indication_set(BSP_INDICATE_USER_STATE_OFF);
+  if (length != (p_receiver->pwm_count * sizeof(pwm_value))) {
     return;
   }
-  ble_receiver_pwm_set(p_receiver, (pwm_value *) p_data);
+  ble_receiver_pwm_set(p_receiver, (pwm_value *)p_data);
 }
 
 void ble_receiver_pwm_update(void)
@@ -175,20 +179,18 @@ void ble_receiver_pwm_start(ble_receiver_t *p_receiver)
   nrf_drv_pwm_simple_playback(&g_pwm_instance,
 			      &g_pwm_seq,
 			      1,
-			      NRF_DRV_PWM_FLAG_LOOP);
-#if NOT_YET
-  NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ0 |
-    NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ1);
-#endif
+			      NRF_DRV_PWM_FLAG_LOOP |
+			      NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ0 |
+			      NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ1);
 }
 
 void pwm_handler(nrf_drv_pwm_evt_type_t event_type)
 {
-
+#if 0
   if (g_pwm_new_values == false) {
     return;
   }
-
+#endif
   if ((event_type == NRF_DRV_PWM_EVT_END_SEQ0) || (event_type == NRF_DRV_PWM_EVT_END_SEQ1)) {
     ble_receiver_pwm_update();
   }
@@ -211,6 +213,10 @@ void ble_receiver_pwm_set_failsafe(ble_receiver_t *p_receiver)
 // XXX synchronization problems? 
 void ble_receiver_watchdog(ble_receiver_t *p_receiver)
 {
+  if (disable_failsafe == true) {
+    return;
+  }
+
 #if NOT_YET
   ble_receiver_pwm_set_failsafe(p_receiver);
 #endif
@@ -473,7 +479,7 @@ static uint32_t receiver_deviceid_char_add(ble_receiver_t * p_receiver, const bl
                                            &p_receiver->deviceid_handles);
 }
 
-static uint32_t receiver_write_char_add(ble_receiver_t * p_receiver, const ble_receiver_init_t * p_receiver_init, uint16_t uuid, ble_gatts_char_handles_t *const 	p_handles)
+static uint32_t receiver_write_char_add(ble_receiver_t * p_receiver, const ble_receiver_init_t * p_receiver_init, uint16_t uuid, ble_gatts_char_handles_t *const 	p_handles, int length)
 {
     ble_gatts_char_md_t char_md;
     ble_gatts_attr_t    attr_char_value;
@@ -506,9 +512,9 @@ static uint32_t receiver_write_char_add(ble_receiver_t * p_receiver, const ble_r
 
     attr_char_value.p_uuid    = &ble_uuid;
     attr_char_value.p_attr_md = &attr_md;
-    attr_char_value.init_len  = 1;
+    attr_char_value.init_len  = length;
     attr_char_value.init_offs = 0;
-    attr_char_value.max_len   = 1;
+    attr_char_value.max_len   = length;
 
     return sd_ble_gatts_characteristic_add(p_receiver->service_handle,
                                            &char_md,
@@ -551,8 +557,7 @@ uint32_t ble_receiver_pwm_init(ble_receiver_t *p_receiver)
     }
   }
 
-  err_code = nrf_drv_pwm_init(&g_pwm_instance, &pwm_config, NULL);
-  // XXX pwm_handler
+  err_code = nrf_drv_pwm_init(&g_pwm_instance, &pwm_config, pwm_handler);
   APP_ERROR_CHECK(err_code);
   
   ble_receiver_pwm_set_failsafe(p_receiver);
@@ -603,19 +608,22 @@ uint32_t ble_receiver_init(ble_receiver_t * p_receiver, ble_receiver_init_t *p_r
     err_code = receiver_write_char_add(p_receiver,
 				       p_receiver_init,
 				       BLE_UUID_HEART_RATE_MEASUREMENT_CHAR,
-				       &p_receiver->heartbeat_handles);
+				       &p_receiver->heartbeat_handles,
+				       1);
     APP_ERROR_CHECK(err_code);
     // Add gpio charactersistic
     err_code = receiver_write_char_add(p_receiver,
 				       p_receiver_init,
 				       BLE_UUID_BLOOD_PRESSURE_SERVICE,
-				       &p_receiver->gpio_handles);
+				       &p_receiver->gpio_handles,
+				       p_receiver->config->gpios_count * sizeof(gpio_value));
     APP_ERROR_CHECK(err_code);
     // Add pwm charactersistic
     err_code = receiver_write_char_add(p_receiver,
 				       p_receiver_init,
 				       BLE_UUID_GLUCOSE_SERVICE,
-				       &p_receiver->pwm_handles);
+				       &p_receiver->pwm_handles,
+				       p_receiver->pwm_count * sizeof(pwm_value));
     APP_ERROR_CHECK(err_code);
 
 #if 0
