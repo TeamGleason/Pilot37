@@ -15,7 +15,7 @@ struct receiver_gpio_config {
 struct receiver_pwm_config {
   uint32_t pin;
   uint32_t pin_flags;
-  gpio_value failsafe_value;
+  pwm_value failsafe_value;
 };
 
 typedef struct { 

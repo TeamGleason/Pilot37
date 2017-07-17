@@ -74,6 +74,32 @@ nrf_pwm_sequence_t const g_pwm_seq = {
   .end_delay = 0
 };
 
+nrf_pwm_values_individual_t g_pwm_seq_values[1];
+nrf_pwm_values_individual_t g_pwm_seq_values_new[1];
+
+nrf_pwm_values_individual_t alt_seq_values[] = {
+  //  { 0, 0, 0, 0},
+  { 100|0x8000, 0 , 0 , 0},
+#if 0
+  { 200|0x8000, 0 , 0 , 0},
+  { 300|0x8000, 0 , 0 , 0},
+  { 400|0x8000, 0 , 0 , 0},
+  { 500|0x8000, 0 , 0 , 0},
+  { 600|0x8000, 0 , 0 , 0},
+  { 700|0x8000, 0 , 0 , 0},
+  { 800|0x8000, 0 , 0 , 0},
+  { 1000|0x8000, 0 , 0 , 0}
+#endif
+};
+
+nrf_pwm_sequence_t const alt_seq = {
+  .values.p_individual = alt_seq_values,
+  .length = NRF_PWM_VALUES_LENGTH(alt_seq_values),
+  .repeats = 0,
+  .end_delay = 0
+};
+
+
 bool g_pwm_new_values = false;
 
 bool g_outstanding_watchdog = false;
@@ -118,10 +144,10 @@ void ble_receiver_gpio_init(ble_receiver_t *p_receiver) {
 
 void ble_receiver_pwm_set(ble_receiver_t *p_receiver, pwm_value *vals)
 {
-  g_pwm_seq_values_new[0].channel_0 = *vals++;
-  g_pwm_seq_values_new[0].channel_1 = *vals++;
-  g_pwm_seq_values_new[0].channel_2 = *vals++;
-  g_pwm_seq_values_new[0].channel_3 = *vals++;
+  g_pwm_seq_values_new[0].channel_0 = vals[0] | 0x8000;
+  g_pwm_seq_values_new[0].channel_1 = vals[1] | 0x8000;
+  g_pwm_seq_values_new[0].channel_2 = vals[2] | 0x8000;
+  g_pwm_seq_values_new[0].channel_3 = vals[3] | 0x8000;
   
   g_pwm_new_values = true;
 }
@@ -151,8 +177,8 @@ void ble_receiver_pwm_start(ble_receiver_t *p_receiver)
 			      1,
 			      NRF_DRV_PWM_FLAG_LOOP);
 #if NOT_YET
-			      //			      NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ0 |
-			      //			      NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ1);
+  NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ0 |
+    NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ1);
 #endif
 }
 
@@ -174,7 +200,7 @@ void ble_receiver_pwm_set_failsafe(ble_receiver_t *p_receiver)
 
   for (int i = 0; i < 4; i++) {
     if (i < p_receiver->pwm_count) {
-      vals[i] = p_receiver->config->pwms[i].pin;
+      vals[i] = p_receiver->config->pwms[i].failsafe_value;
     } else {
       vals[i] = 0;
     }
@@ -497,7 +523,7 @@ uint32_t ble_receiver_pwm_init(ble_receiver_t *p_receiver)
     .irq_priority = APP_IRQ_PRIORITY_LOW,
     .base_clock   = NRF_PWM_CLK_1MHz,
     .count_mode   = NRF_PWM_MODE_UP,
-    .top_value    = 1000,
+    .top_value    = 20000,
     .load_mode    = NRF_PWM_LOAD_INDIVIDUAL,
     .step_mode    = NRF_PWM_STEP_AUTO
   };

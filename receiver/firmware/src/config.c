@@ -5,7 +5,7 @@ const struct receiver_gpio_config gpio_config[] = {
 };
 
 const struct receiver_pwm_config pwm_config[] = {
-  { 28, 0, 10000}
+  { 28, 0, 100}
   //    { 29, 0, 0}
 };
 
