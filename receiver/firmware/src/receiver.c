@@ -157,7 +157,6 @@ void ble_receiver_pwm_set(ble_receiver_t *p_receiver, pwm_value *vals)
 
 void ble_receiver_pwm_set_validate(ble_receiver_t *p_receiver, uint8_t * p_data, uint16_t length)
 {
-  bsp_indication_set(BSP_INDICATE_USER_STATE_OFF);
   if (length != (p_receiver->pwm_count * sizeof(pwm_value))) {
     return;
   }
