@@ -64,11 +64,11 @@
 // XXX should all be part of the receiver struct
 
 nrf_drv_pwm_t g_pwm_instance = NRF_DRV_PWM_INSTANCE(0);
-nrf_pwm_values_individual_t g_pwm_seq_values;
-nrf_pwm_values_individual_t g_pwm_seq_values_new;
+nrf_pwm_values_individual_t g_pwm_seq_values[1];
+nrf_pwm_values_individual_t g_pwm_seq_values_new[1];
 
 nrf_pwm_sequence_t const g_pwm_seq = {
-  .values.p_individual = &g_pwm_seq_values,
+  .values.p_individual = g_pwm_seq_values,
   .length = NRF_PWM_VALUES_LENGTH(g_pwm_seq_values),
   .repeats = 0,
   .end_delay = 0
@@ -118,11 +118,11 @@ void ble_receiver_gpio_init(ble_receiver_t *p_receiver) {
 
 void ble_receiver_pwm_set(ble_receiver_t *p_receiver, pwm_value *vals)
 {
-  pwm_value *channel = (pwm_value *)&g_pwm_seq_values_new.channel_0;
-
-  for (int i = 0; i < p_receiver->pwm_count; i++) {
-    *channel++ = *vals++;
-  }
+  g_pwm_seq_values_new[0].channel_0 = *vals++;
+  g_pwm_seq_values_new[0].channel_1 = *vals++;
+  g_pwm_seq_values_new[0].channel_2 = *vals++;
+  g_pwm_seq_values_new[0].channel_3 = *vals++;
+  
   g_pwm_new_values = true;
 }
 
@@ -140,13 +140,7 @@ void ble_receiver_pwm_update(void)
     return;
   }
 
-  uint16_t *channel_new = &g_pwm_seq_values_new.channel_0;
-  uint16_t *channel_active = &g_pwm_seq_values.channel_0;
-
-  *channel_active++ = *channel_new++;
-  *channel_active++ = *channel_new++;
-  *channel_active++ = *channel_new++;
-  *channel_active++ = *channel_new++;
+  g_pwm_seq_values[0] = g_pwm_seq_values_new[0];
   g_pwm_new_values = false;
 }
 
@@ -155,9 +149,11 @@ void ble_receiver_pwm_start(ble_receiver_t *p_receiver)
   nrf_drv_pwm_simple_playback(&g_pwm_instance,
 			      &g_pwm_seq,
 			      1,
-			      NRF_DRV_PWM_FLAG_LOOP | 
-			      NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ0 |
-			      NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ1);
+			      NRF_DRV_PWM_FLAG_LOOP);
+#if NOT_YET
+			      //			      NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ0 |
+			      //			      NRF_DRV_PWM_FLAG_SIGNAL_END_SEQ1);
+#endif
 }
 
 void pwm_handler(nrf_drv_pwm_evt_type_t event_type)
@@ -189,10 +185,9 @@ void ble_receiver_pwm_set_failsafe(ble_receiver_t *p_receiver)
 // XXX synchronization problems? 
 void ble_receiver_watchdog(ble_receiver_t *p_receiver)
 {
-#if 0
+#if NOT_YET
   ble_receiver_pwm_set_failsafe(p_receiver);
 #endif
-
   ble_receiver_gpio_set_failsafe(p_receiver);
 }
 
@@ -494,21 +489,21 @@ static uint32_t receiver_write_char_add(ble_receiver_t * p_receiver, const ble_r
                                            &attr_char_value,
                                            p_handles);
 }
-uint32_t ble_receiver_pwm_init(ble_receiver_t *p_receiver,ble_receiver_init_t *p_receiver_init)
+
+uint32_t ble_receiver_pwm_init(ble_receiver_t *p_receiver)
 {
+  uint32_t err_code;
   nrf_drv_pwm_config_t pwm_config = {
-    .irq_priority = APP_IRQ_PRIORITY_LOWEST,
+    .irq_priority = APP_IRQ_PRIORITY_LOW,
     .base_clock   = NRF_PWM_CLK_1MHz,
     .count_mode   = NRF_PWM_MODE_UP,
-    .top_value    = 20000, 	/* period of 20ms */
+    .top_value    = 1000,
     .load_mode    = NRF_PWM_LOAD_INDIVIDUAL,
     .step_mode    = NRF_PWM_STEP_AUTO
   };
-  uint32_t             err_code;
   int pwm_count;
 
-
-  if (p_receiver_init->config->pwm_count == 0) {
+  if (p_receiver->config->pwm_count == 0) {
     return NRF_SUCCESS;
   }
 
@@ -516,7 +511,7 @@ uint32_t ble_receiver_pwm_init(ble_receiver_t *p_receiver,ble_receiver_init_t *p
   // Initialize PWM channel data
   //
 
-  pwm_count = p_receiver_init->config->pwm_count;
+  pwm_count = p_receiver->config->pwm_count;
   if (pwm_count > 4) {
     pwm_count = 4;
   }
@@ -524,15 +519,14 @@ uint32_t ble_receiver_pwm_init(ble_receiver_t *p_receiver,ble_receiver_init_t *p
 
   for (int i = 0; i < 4; i++) {
     if (i < pwm_count) {
-      pwm_config.output_pins[i] = p_receiver_init->config->pwms[i].pin;
+      pwm_config.output_pins[i] = p_receiver->config->pwms[i].pin;
     } else {
       pwm_config.output_pins[i] = NRF_DRV_PWM_PIN_NOT_USED;
     }
   }
 
-  p_receiver->config = p_receiver_init->config;
-
-  err_code = nrf_drv_pwm_init(&g_pwm_instance, &pwm_config, pwm_handler);
+  err_code = nrf_drv_pwm_init(&g_pwm_instance, &pwm_config, NULL);
+  // XXX pwm_handler
   APP_ERROR_CHECK(err_code);
   
   ble_receiver_pwm_set_failsafe(p_receiver);
@@ -556,9 +550,7 @@ uint32_t ble_receiver_init(ble_receiver_t * p_receiver, ble_receiver_init_t *p_r
     p_receiver->config      = p_receiver_init->config;
 
     ble_receiver_gpio_init(p_receiver);
-#if NOT_YET
-    ble_receiver_pwm_init(p_receiver, p_receiver_init);
-#endif    
+    ble_receiver_pwm_init(p_receiver);
 
     // Create watchdog timer
     err_code = app_timer_create(&g_watchdog_timer_id,

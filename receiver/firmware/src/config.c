@@ -1,10 +1,12 @@
 #include "config.h"
 
 const struct receiver_gpio_config gpio_config[] = {
-  { 29, true},
+  //     { 28, true},
 };
 
 const struct receiver_pwm_config pwm_config[] = {
+  { 28, 0, 10000}
+  //    { 29, 0, 0}
 };
 
 const receiver_device_config_t device_config = {
