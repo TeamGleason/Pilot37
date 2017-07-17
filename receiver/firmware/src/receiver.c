@@ -60,12 +60,17 @@
 #define HANDLE_LENGTH 2                                                             /**< Length of handle inside Cycling Speed and Cadence Measurement packet. */
 #define MAX_CSCM_LEN  (BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH - HANDLE_LENGTH)    /**< Maximum size of a transmitted Cycling Speed and Cadence Measurement. */
 
-#define BLE_RECEIVER_WATCHDOG_TICKS APP_TIMER_TICKS(1000)
-
-bool disable_failsafe = true;
+#define BLE_RECEIVER_WATCHDOG_TICKS APP_TIMER_TICKS(400)
 
 // XXX should all be part of the receiver struct
 
+bool g_disable_failsafe = false;
+bool g_failsafe_state = true;
+
+bool g_outstanding_watchdog = false;
+bool g_heartbeat_received = false;
+
+bool g_pwm_new_values = false;
 nrf_drv_pwm_t g_pwm_instance = NRF_DRV_PWM_INSTANCE(0);
 nrf_pwm_values_individual_t g_pwm_seq_values[1];
 nrf_pwm_values_individual_t g_pwm_seq_values_new[1];
@@ -73,40 +78,13 @@ nrf_pwm_values_individual_t g_pwm_seq_values_new[1];
 nrf_pwm_sequence_t const g_pwm_seq = {
   .values.p_individual = g_pwm_seq_values,
   .length = NRF_PWM_VALUES_LENGTH(g_pwm_seq_values),
-  .repeats = 10,
+  .repeats = 5,			
   .end_delay = 0
 };
 
 nrf_pwm_values_individual_t g_pwm_seq_values[1];
 nrf_pwm_values_individual_t g_pwm_seq_values_new[1];
 
-nrf_pwm_values_individual_t alt_seq_values[] = {
-  //  { 0, 0, 0, 0},
-  { 100|0x8000, 0 , 0 , 0},
-#if 0
-  { 200|0x8000, 0 , 0 , 0},
-  { 300|0x8000, 0 , 0 , 0},
-  { 400|0x8000, 0 , 0 , 0},
-  { 500|0x8000, 0 , 0 , 0},
-  { 600|0x8000, 0 , 0 , 0},
-  { 700|0x8000, 0 , 0 , 0},
-  { 800|0x8000, 0 , 0 , 0},
-  { 1000|0x8000, 0 , 0 , 0}
-#endif
-};
-
-nrf_pwm_sequence_t const alt_seq = {
-  .values.p_individual = alt_seq_values,
-  .length = NRF_PWM_VALUES_LENGTH(alt_seq_values),
-  .repeats = 0,
-  .end_delay = 0
-};
-
-
-bool g_pwm_new_values = false;
-
-bool g_outstanding_watchdog = false;
-bool g_heartbeat_received = false;
 
 APP_TIMER_DEF(g_watchdog_timer_id);
 
@@ -119,6 +97,10 @@ void ble_receiver_gpio_set(ble_receiver_t *p_receiver, gpio_value *vals)
 
 void ble_receiver_gpio_set_validate(ble_receiver_t *p_receiver, uint8_t * p_data, uint16_t length)
 {
+  if (g_failsafe_state == true) {
+    return;
+  }
+
   if (length != (p_receiver->config->gpios_count * sizeof(gpio_value))) {
     return;
   }
@@ -157,6 +139,10 @@ void ble_receiver_pwm_set(ble_receiver_t *p_receiver, pwm_value *vals)
 
 void ble_receiver_pwm_set_validate(ble_receiver_t *p_receiver, uint8_t * p_data, uint16_t length)
 {
+  if (g_failsafe_state == true) {
+    return;
+  }
+
   if (length != (p_receiver->pwm_count * sizeof(pwm_value))) {
     return;
   }
@@ -185,11 +171,10 @@ void ble_receiver_pwm_start(ble_receiver_t *p_receiver)
 
 void pwm_handler(nrf_drv_pwm_evt_type_t event_type)
 {
-#if 0
   if (g_pwm_new_values == false) {
     return;
   }
-#endif
+
   if ((event_type == NRF_DRV_PWM_EVT_END_SEQ0) || (event_type == NRF_DRV_PWM_EVT_END_SEQ1)) {
     ble_receiver_pwm_update();
   }
@@ -209,16 +194,9 @@ void ble_receiver_pwm_set_failsafe(ble_receiver_t *p_receiver)
   ble_receiver_pwm_set(p_receiver, vals);
 }
 
-// XXX synchronization problems? 
-void ble_receiver_watchdog(ble_receiver_t *p_receiver)
+void ble_receiver_set_failsafe(ble_receiver_t *p_receiver)
 {
-  if (disable_failsafe == true) {
-    return;
-  }
-
-#if NOT_YET
   ble_receiver_pwm_set_failsafe(p_receiver);
-#endif
   ble_receiver_gpio_set_failsafe(p_receiver);
 }
 
@@ -243,20 +221,21 @@ void ble_receiver_heartbeat_received(ble_receiver_t *p_receiver)
 // * If watchdog event occurs and connected, issue new oneshot.
 // * On disconnect event, issue oneshot.
 //
-// Potential improvements:
-// * new PWM step down sequence
-// * more tolerance for missed hearbeats
-// * restart oneshot on heartbeat receive (stop existing, start new)
-// * treat all input as heartbeat reception
-//
 
 void ble_receiver_watchdog_handler(void *p_context)
 {
   ble_receiver_t *p_receiver = p_context;
 
-  if (g_heartbeat_received != true) {
-    ble_receiver_watchdog(p_receiver);
+  if (g_heartbeat_received == true) {
+    g_failsafe_state = false;
+  } else {
+
+    if (g_disable_failsafe == false) {
+      g_failsafe_state = true;
+      ble_receiver_set_failsafe(p_receiver);
+    }
   }
+
   g_heartbeat_received = false;
   g_outstanding_watchdog = false;
 
@@ -581,6 +560,10 @@ uint32_t ble_receiver_init(ble_receiver_t * p_receiver, ble_receiver_init_t *p_r
 
     ble_receiver_gpio_init(p_receiver);
     ble_receiver_pwm_init(p_receiver);
+
+    if (g_disable_failsafe == true) {
+      g_failsafe_state = false;
+    }
 
     // Create watchdog timer
     err_code = app_timer_create(&g_watchdog_timer_id,
