@@ -105,6 +105,7 @@ struct ble_receiver_s
     ble_gatts_char_handles_t     gpio_handles;
     ble_gatts_char_handles_t     pwm_handles;
     uint16_t                     conn_handle;                           /**< Handle of the current connection (as provided by the BLE stack, is BLE_CONN_HANDLE_INVALID if not in a connection). */
+    uint8_t                     uuid_type;           /**< UUID type for the Receiver Service. */
 
     const receiver_device_config_t *config;
     int pwm_count;
@@ -156,6 +157,9 @@ void ble_receiver_on_ble_evt(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
  */
 uint32_t ble_receiver_measurement_send(ble_receiver_t * p_receiver, ble_receiver_meas_t * p_measurement);
 
+
+#define RECEIVER_UUID_BASE {{0x6c, 0x89, 0x06, 0x1a, 0xab, 0x3d, 0x4a, 0xc4, 0x91, 0x09, 0x0c, 0xd8, 0x9b, 0x07, 0x9f, 0x8e}}
+#define RECEIVER_UUID_SERVICE     0x3737
 
 #ifdef __cplusplus
 }

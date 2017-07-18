@@ -125,7 +125,9 @@ static sensorsim_state_t m_battery_sim_state;                                   
 
 APP_TIMER_DEF(m_battery_timer_id);                                                  /**< Battery timer. */
 
-static ble_uuid_t m_adv_uuids[] = {{BLE_UUID_CYCLING_SPEED_AND_CADENCE, BLE_UUID_TYPE_BLE},
+const ble_uuid128_t receiver_uuid = RECEIVER_UUID_BASE;
+
+static ble_uuid_t m_adv_uuids[] = {{0,0},
                                    {BLE_UUID_BATTERY_SERVICE, BLE_UUID_TYPE_BLE},
                                    {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}}; /**< Universally unique service identifiers. */
 
@@ -672,7 +674,7 @@ static void ble_stack_init(void)
 
     // Configure the number of custom UUIDS.
     memset(&ble_cfg, 0, sizeof(ble_cfg));
-    ble_cfg.common_cfg.vs_uuid_cfg.vs_uuid_count = 0;
+    ble_cfg.common_cfg.vs_uuid_cfg.vs_uuid_count = 1;
     err_code = sd_ble_cfg_set(BLE_COMMON_CFG_VS_UUID, &ble_cfg, ram_start);
     APP_ERROR_CHECK(err_code);
 
@@ -792,22 +794,25 @@ static void advertising_init(void)
     ret_code_t             err_code;
     ble_advdata_t          advdata;
     ble_adv_modes_config_t options;
+    ble_advdata_t          scanrsp;
 
     // Build advertising data struct to pass into @ref ble_advertising_init.
     memset(&advdata, 0, sizeof(advdata));
 
     advdata.name_type               = BLE_ADVDATA_FULL_NAME;
     advdata.include_appearance      = true;
-    advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
-    advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
-    advdata.uuids_complete.p_uuids  = m_adv_uuids;
+    advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
+    memset(&scanrsp, 0, sizeof(scanrsp));
+
+    scanrsp.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
+    scanrsp.uuids_complete.p_uuids  = m_adv_uuids;
 
     memset(&options, 0, sizeof(options));
     options.ble_adv_fast_enabled  = true;
     options.ble_adv_fast_interval = APP_ADV_INTERVAL;
     options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
 
-    err_code = ble_advertising_init(&advdata, NULL, &options, on_adv_evt, NULL);
+    err_code = ble_advertising_init(&advdata, &scanrsp, &options, on_adv_evt, NULL);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -874,6 +879,17 @@ static void advertising_start(bool erase_bonds)
     }
 }
 
+void uuid_init()
+{
+  ret_code_t err_code;
+
+  err_code = sd_ble_uuid_vs_add(&receiver_uuid, &m_receiver.uuid_type);
+  APP_ERROR_CHECK(err_code);
+
+  m_adv_uuids[0].uuid = RECEIVER_UUID_SERVICE;
+  m_adv_uuids[0].type = m_receiver.uuid_type;
+}
+
 
 /**@brief Function for application main entry.
  */
@@ -888,6 +904,7 @@ int main(void)
     ble_stack_init();
     gap_params_init();
     gatt_init();
+    uuid_init();
     advertising_init();
     services_init();
     sensor_simulator_init();

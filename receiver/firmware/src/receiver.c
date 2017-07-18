@@ -54,7 +54,10 @@
 #include "app_util_platform.h"
 #include "app_timer.h"
 
-// XXX all guids are temporary
+#define RECEIVER_DEVICEID_CHAR    0x3738
+#define RECEIVER_HEARTBEAT_CHAR   0x3739
+#define RECEIVER_GPIO_CHAR        0x373A
+#define RECEIVER_PWM_CHAR         0x373B
 
 #define OPCODE_LENGTH 1                                                             /**< Length of opcode inside Cycling Speed and Cadence Measurement packet. */
 #define HANDLE_LENGTH 2                                                             /**< Length of handle inside Cycling Speed and Cadence Measurement packet. */
@@ -344,66 +347,6 @@ void ble_receiver_on_ble_evt(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
             break;
     }
 }
-#if NOT_YET
-
-/**@brief Function for adding CSC Measurement characteristics.
- *
- * @param[in]   p_receiver        Cycling Speed and Cadence Service structure.
- * @param[in]   p_receiver_init   Information needed to initialize the service.
- *
- * @return      NRF_SUCCESS on success, otherwise an error code.
- */
-static uint32_t csc_measurement_char_add(ble_receiver_t * p_receiver, const ble_receiver_init_t * p_receiver_init)
-{
-    ble_gatts_char_md_t char_md;
-    ble_gatts_attr_md_t cccd_md;
-    ble_gatts_attr_t    attr_char_value;
-    ble_uuid_t          ble_uuid;
-    ble_gatts_attr_md_t attr_md;
-    ble_receiver_meas_t     initial_scm;
-    uint8_t             encoded_scm[MAX_CSCM_LEN];
-    memset(&cccd_md, 0, sizeof(cccd_md));
-
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.read_perm);
-    cccd_md.write_perm = p_receiver_init->csc_meas_attr_md.cccd_write_perm;
-    cccd_md.vloc       = BLE_GATTS_VLOC_STACK;
-
-    memset(&char_md, 0, sizeof(char_md));
-
-    char_md.char_props.notify = 1;
-    char_md.p_char_user_desc  = NULL;
-    char_md.p_char_pf         = NULL;
-    char_md.p_user_desc_md    = NULL;
-    char_md.p_cccd_md         = &cccd_md;
-    char_md.p_sccd_md         = NULL;
-
-    BLE_UUID_BLE_ASSIGN(ble_uuid, BLE_UUID_CSC_MEASUREMENT_CHAR);
-
-    memset(&attr_md, 0, sizeof(attr_md));
-
-    BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&attr_md.read_perm );
-
-    BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&attr_md.write_perm);
-    attr_md.vloc       = BLE_GATTS_VLOC_STACK;
-    attr_md.rd_auth    = 0;
-    attr_md.wr_auth    = 0;
-    attr_md.vlen       = 1;
-
-    memset(&attr_char_value, 0, sizeof(attr_char_value));
-
-    attr_char_value.p_uuid       = &ble_uuid;
-    attr_char_value.p_attr_md    = &attr_md;
-    attr_char_value.init_len     = csc_measurement_encode(p_receiver, &initial_scm, encoded_scm);
-    attr_char_value.init_offs    = 0;
-    attr_char_value.max_len      = MAX_CSCM_LEN;
-    attr_char_value.p_value      = encoded_scm;
-
-    return sd_ble_gatts_characteristic_add(p_receiver->service_handle,
-                                           &char_md,
-                                           &attr_char_value,
-                                           &p_receiver->meas_handles);
-}
-#endif
 
 /**@brief Function for adding receiver device id characteristics.
  *
@@ -429,7 +372,8 @@ static uint32_t receiver_deviceid_char_add(ble_receiver_t * p_receiver, const bl
     char_md.p_cccd_md        = NULL;
     char_md.p_sccd_md        = NULL;
 
-    BLE_UUID_BLE_ASSIGN(ble_uuid, BLE_UUID_CSC_FEATURE_CHAR);
+    ble_uuid.type = p_receiver->uuid_type;
+    ble_uuid.uuid = RECEIVER_DEVICEID_CHAR;
 
     memset(&attr_md, 0, sizeof(attr_md));
 
@@ -473,8 +417,8 @@ static uint32_t receiver_write_char_add(ble_receiver_t * p_receiver, const ble_r
     char_md.p_cccd_md                = NULL;
     char_md.p_sccd_md                = NULL;
 
-    // XXX temp
-    BLE_UUID_BLE_ASSIGN(ble_uuid, uuid);
+    ble_uuid.type = p_receiver->uuid_type;
+    ble_uuid.uuid = uuid;
 
     memset(&attr_md, 0, sizeof(attr_md));
 
@@ -570,8 +514,18 @@ uint32_t ble_receiver_init(ble_receiver_t * p_receiver, ble_receiver_init_t *p_r
                                 APP_TIMER_MODE_SINGLE_SHOT,
                                 ble_receiver_watchdog_handler);
 
+#if 1
+    // Add uuid
+    ble_uuid128_t base_uuid = RECEIVER_UUID_BASE;
+    err_code = sd_ble_uuid_vs_add(&base_uuid, &p_receiver->uuid_type);
+    APP_ERROR_CHECK(err_code);
+
+    ble_uuid.type = p_receiver->uuid_type;
+    ble_uuid.uuid = RECEIVER_UUID_SERVICE;
+#else
     // Add service
     BLE_UUID_BLE_ASSIGN(ble_uuid, BLE_UUID_CYCLING_SPEED_AND_CADENCE);
+#endif
 
     err_code = sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY,
                                         &ble_uuid,
@@ -589,21 +543,21 @@ uint32_t ble_receiver_init(ble_receiver_t * p_receiver, ble_receiver_init_t *p_r
     // Add heartbeat charactersistic
     err_code = receiver_write_char_add(p_receiver,
 				       p_receiver_init,
-				       BLE_UUID_HEART_RATE_MEASUREMENT_CHAR,
+				       RECEIVER_HEARTBEAT_CHAR,
 				       &p_receiver->heartbeat_handles,
 				       1);
     APP_ERROR_CHECK(err_code);
     // Add gpio charactersistic
     err_code = receiver_write_char_add(p_receiver,
 				       p_receiver_init,
-				       BLE_UUID_BLOOD_PRESSURE_SERVICE,
+				       RECEIVER_GPIO_CHAR,
 				       &p_receiver->gpio_handles,
 				       p_receiver->config->gpios_count * sizeof(gpio_value));
     APP_ERROR_CHECK(err_code);
     // Add pwm charactersistic
     err_code = receiver_write_char_add(p_receiver,
 				       p_receiver_init,
-				       BLE_UUID_GLUCOSE_SERVICE,
+				       RECEIVER_PWM_CHAR,
 				       &p_receiver->pwm_handles,
 				       p_receiver->pwm_count * sizeof(pwm_value));
     APP_ERROR_CHECK(err_code);
