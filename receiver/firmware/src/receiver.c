@@ -63,7 +63,7 @@
 #define HANDLE_LENGTH 2                                                             /**< Length of handle inside Cycling Speed and Cadence Measurement packet. */
 #define MAX_CSCM_LEN  (BLE_GATT_ATT_MTU_DEFAULT - OPCODE_LENGTH - HANDLE_LENGTH)    /**< Maximum size of a transmitted Cycling Speed and Cadence Measurement. */
 
-#define BLE_RECEIVER_WATCHDOG_TICKS APP_TIMER_TICKS(400)
+#define BLE_RECEIVER_WATCHDOG_TICKS APP_TIMER_TICKS(2000)
 
 // XXX should all be part of the receiver struct
 
