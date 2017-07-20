@@ -1,30 +1,30 @@
 /**
  * Copyright (c) 2012 - 2017, Nordic Semiconductor ASA
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form, except as embedded into a Nordic
  *    Semiconductor ASA integrated circuit in a product or a software update for
  *    such product, must reproduce the above copyright notice, this list of
  *    conditions and the following disclaimer in the documentation and/or other
  *    materials provided with the distribution.
- * 
+ *
  * 3. Neither the name of Nordic Semiconductor ASA nor the names of its
  *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
- * 
+ *
  * 4. This software, with or without modification, must only be used with a
  *    Nordic Semiconductor ASA integrated circuit.
- * 
+ *
  * 5. Any software provided in binary form under this license must not be reverssed
  *    engineered, decompiled, modified and/or disassembled.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY NORDIC SEMICONDUCTOR ASA "AS IS" AND ANY EXPRESS
  * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
  * OF MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -35,7 +35,7 @@
  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 /* Attention!
 *  To maintain compliance with Nordic Semiconductor ASA's Bluetooth profile
@@ -81,7 +81,7 @@ nrf_pwm_values_individual_t g_pwm_seq_values_new[1];
 nrf_pwm_sequence_t const g_pwm_seq = {
   .values.p_individual = g_pwm_seq_values,
   .length = NRF_PWM_VALUES_LENGTH(g_pwm_seq_values),
-  .repeats = 5,			
+  .repeats = 5,
   .end_delay = 0
 };
 
@@ -136,7 +136,7 @@ void ble_receiver_pwm_set(ble_receiver_t *p_receiver, pwm_value *vals)
   g_pwm_seq_values_new[0].channel_1 = vals[1] | 0x8000;
   g_pwm_seq_values_new[0].channel_2 = vals[2] | 0x8000;
   g_pwm_seq_values_new[0].channel_3 = vals[3] | 0x8000;
-  
+
   g_pwm_new_values = true;
 }
 
@@ -235,6 +235,7 @@ void ble_receiver_watchdog_handler(void *p_context)
 
     if (g_disable_failsafe == false) {
       g_failsafe_state = true;
+      printf("Entering Failsafe");
       ble_receiver_set_failsafe(p_receiver);
     }
   }
@@ -323,7 +324,7 @@ static void on_write(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
       ble_receiver_gpio_set_validate(p_receiver, p_evt_write->data, p_evt_write->len);
     } else if (p_evt_write->handle == p_receiver->pwm_handles.value_handle) {
       ble_receiver_pwm_set_validate(p_receiver, p_evt_write->data, p_evt_write->len);
-    } 
+    }
 }
 
 void ble_receiver_on_ble_evt(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
@@ -331,19 +332,23 @@ void ble_receiver_on_ble_evt(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
+            printf("Connected");
             on_connect(p_receiver, p_ble_evt);
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
+            printf("Disconnected");
             on_disconnect(p_receiver, p_ble_evt);
             break;
 
         case BLE_GATTS_EVT_WRITE:
+            printf("GATTS Write");
             on_write(p_receiver, p_ble_evt);
             break;
 
         default:
             // No implementation needed.
+            printf("BLE Event %d", p_ble_evt->header.evt_id);
             break;
     }
 }
@@ -377,7 +382,7 @@ static uint32_t receiver_deviceid_char_add(ble_receiver_t * p_receiver, const bl
 
     memset(&attr_md, 0, sizeof(attr_md));
 
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.read_perm);  
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.read_perm);
     BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&attr_md.write_perm);
     attr_md.vloc       = BLE_GATTS_VLOC_STACK;
     attr_md.rd_auth    = 0;
@@ -481,7 +486,7 @@ uint32_t ble_receiver_pwm_init(ble_receiver_t *p_receiver)
 
   err_code = nrf_drv_pwm_init(&g_pwm_instance, &pwm_config, pwm_handler);
   APP_ERROR_CHECK(err_code);
-  
+
   ble_receiver_pwm_set_failsafe(p_receiver);
   ble_receiver_pwm_update();
 
