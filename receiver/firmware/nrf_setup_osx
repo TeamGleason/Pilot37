@@ -1,0 +1,11 @@
+#!/bin/sh
+SDK_VERSION=nRF5_SDK_13.1.0_7ca7556
+rm -f $SDK_VERSION.zip
+rm -rf nRFS-SDK
+rm -rf gcc-arm-none-eabi
+wget https://developer.nordicsemi.com/nRF5_SDK/nRF5_SDK_v13.x.x/$SDK_VERSION.zip
+unzip $SDK_VERSION.zip -d nRF5-SDK
+mkdir gcc-arm-none-eabi
+wget -q -O - https://developer.arm.com/-/media/Files/downloads/gnu-rm/6-2017q2/gcc-arm-none-eabi-6-2017-q2-update-mac.tar.bz2?product=GNU%20ARM%20Embedded%20Toolchain,64-bit,,Mac%20OS%20X,6-2017-q2-update | bzcat | tar --strip-components=1 -C gcc-arm-none-eabi -xf -
+mkdir nRF5-tools
+wget -q -O - wget https://www.nordicsemi.com/eng/nordic/download_resource/53402/15/88003851/99977 | tar -C nRF5-tools -xf -
