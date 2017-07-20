@@ -67,7 +67,7 @@
 
 // XXX should all be part of the receiver struct
 
-bool g_disable_failsafe = false;
+bool g_disable_failsafe = true;
 bool g_failsafe_state = true;
 
 bool g_outstanding_watchdog = false;
@@ -451,7 +451,7 @@ uint32_t ble_receiver_pwm_init(ble_receiver_t *p_receiver)
     .irq_priority = APP_IRQ_PRIORITY_LOW,
     .base_clock   = NRF_PWM_CLK_1MHz,
     .count_mode   = NRF_PWM_MODE_UP,
-    .top_value    = 20000,
+    .top_value    = 10000,
     .load_mode    = NRF_PWM_LOAD_INDIVIDUAL,
     .step_mode    = NRF_PWM_STEP_AUTO
   };
