@@ -75,6 +75,7 @@
 #include "fstorage.h"
 #include "ble_conn_state.h"
 #include "nrf_ble_gatt.h"
+#include "SEGGER_RTT.h"
 
 #include "receiver.h"
 
@@ -146,7 +147,7 @@ static void advertising_start(bool erase_bonds);
  */
 void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 {
-    printf("Soft Device Assertion");
+    SEGGER_RTT_printf(0, "Soft Device Assertion");
     app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
 
@@ -898,7 +899,7 @@ int main(void)
 {
     bool erase_bonds;
 
-    printf("Main Start");
+    SEGGER_RTT_printf(0, "Main Start");
 
     // Initialize.
     log_init();
@@ -926,7 +927,7 @@ int main(void)
             power_manage();
         }
 
-        printf(".");
+        SEGGER_RTT_printf(0, ".");
     }
 }
 

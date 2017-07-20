@@ -53,6 +53,7 @@
 #include "nrf_drv_pwm.h"
 #include "app_util_platform.h"
 #include "app_timer.h"
+#include "SEGGER_RTT.h"
 
 #define RECEIVER_DEVICEID_CHAR    0x3738
 #define RECEIVER_HEARTBEAT_CHAR   0x3739
@@ -235,7 +236,7 @@ void ble_receiver_watchdog_handler(void *p_context)
 
     if (g_disable_failsafe == false) {
       g_failsafe_state = true;
-      printf("Entering Failsafe");
+      SEGGER_RTT_printf(0, "Entering Failsafe");
       ble_receiver_set_failsafe(p_receiver);
     }
   }
@@ -309,6 +310,7 @@ static void on_meas_cccd_write(ble_receiver_t * p_receiver, ble_gatts_evt_write_
  */
 static void on_write(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
 {
+    SEGGER_RTT_printf(0, "receiver::on_write()");
     ble_gatts_evt_write_t * p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
 
 #if NOT_YET
@@ -332,23 +334,23 @@ void ble_receiver_on_ble_evt(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
-            printf("Connected");
+            SEGGER_RTT_printf(0, "Connected");
             on_connect(p_receiver, p_ble_evt);
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
-            printf("Disconnected");
+            SEGGER_RTT_printf(0, "Disconnected");
             on_disconnect(p_receiver, p_ble_evt);
             break;
 
         case BLE_GATTS_EVT_WRITE:
-            printf("GATTS Write");
+            SEGGER_RTT_printf(0, "GATTS Write");
             on_write(p_receiver, p_ble_evt);
             break;
 
         default:
             // No implementation needed.
-            printf("BLE Event %d", p_ble_evt->header.evt_id);
+            SEGGER_RTT_printf(0, "BLE Event %d", p_ble_evt->header.evt_id);
             break;
     }
 }
