@@ -133,6 +133,11 @@ void ble_receiver_gpio_init(ble_receiver_t *p_receiver) {
 
 void ble_receiver_pwm_set(ble_receiver_t *p_receiver, pwm_value *vals)
 {
+  SEGGER_RTT_printf(0, "Setting PWM 0 %d\n", vals[0]);
+  SEGGER_RTT_printf(0, "Setting PWM 1 %d\n", vals[1]);
+  SEGGER_RTT_printf(0, "Setting PWM 2 %d\n", vals[2]);
+  SEGGER_RTT_printf(0, "Setting PWM 3 %d\n", vals[3]);
+
   g_pwm_seq_values_new[0].channel_0 = vals[0] | 0x8000;
   g_pwm_seq_values_new[0].channel_1 = vals[1] | 0x8000;
   g_pwm_seq_values_new[0].channel_2 = vals[2] | 0x8000;
@@ -146,6 +151,8 @@ void ble_receiver_pwm_set_validate(ble_receiver_t *p_receiver, uint8_t * p_data,
   if (g_failsafe_state == true) {
     return;
   }
+
+  SEGGER_RTT_printf(0, "\npwm_set %d %d %d %d %d\n", p_data[0], p_data[1], p_data[2], p_data[3], length);
 
   if (length != (p_receiver->pwm_count * sizeof(pwm_value))) {
     return;
@@ -236,7 +243,7 @@ void ble_receiver_watchdog_handler(void *p_context)
 
     if (g_disable_failsafe == false) {
       g_failsafe_state = true;
-      SEGGER_RTT_printf(0, "Entering Failsafe");
+      SEGGER_RTT_printf(0, "Entering Failsafe\n");
       ble_receiver_set_failsafe(p_receiver);
     }
   }
@@ -312,7 +319,6 @@ static void on_meas_cccd_write(ble_receiver_t * p_receiver, ble_gatts_evt_write_
  */
 static void on_write(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
 {
-    SEGGER_RTT_printf(0, "receiver::on_write()");
     ble_gatts_evt_write_t * p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
 
 #if NOT_YET
@@ -338,17 +344,17 @@ void ble_receiver_on_ble_evt(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
-            SEGGER_RTT_printf(0, "Connected");
+            SEGGER_RTT_printf(0, "Connected\n");
             on_connect(p_receiver, p_ble_evt);
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
-            SEGGER_RTT_printf(0, "Disconnected");
+            SEGGER_RTT_printf(0, "Disconnected\n");
             on_disconnect(p_receiver, p_ble_evt);
             break;
 
         case BLE_GATTS_EVT_WRITE:
-            SEGGER_RTT_printf(0, "GATTS Write");
+            SEGGER_RTT_printf(0, "Write");
             on_write(p_receiver, p_ble_evt);
             break;
 
@@ -398,7 +404,7 @@ void ble_receiver_on_ble_evt(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
 
         default:
             // No implementation needed.
-            SEGGER_RTT_printf(0, "BLE Event %d", p_ble_evt->header.evt_id);
+            SEGGER_RTT_printf(0, "BLE Event %d\n", p_ble_evt->header.evt_id);
             break;
     }
 }

@@ -91,7 +91,7 @@ static void advertising_start(bool erase_bonds);
  */
 void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 {
-    SEGGER_RTT_printf(0, "Soft Device Assertion");
+    SEGGER_RTT_printf(0, "Soft Device Assertion\n");
     app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
 
@@ -100,7 +100,7 @@ void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info )
 {
 
     error_info_t* error_info = (error_info_t*)info;
-    SEGGER_RTT_printf(0, "App Error Handler: %d %d %d %d %s", id, pc, error_info->line_num, error_info->err_code, error_info->p_file_name);
+    SEGGER_RTT_printf(0, "App Error Handler: %d %d %d %d %s\n", id, pc, error_info->line_num, error_info->err_code, error_info->p_file_name);
 
 }
 
@@ -474,7 +474,7 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
             break;
 
         case BLE_ADV_EVT_IDLE:
-            sleep_mode_enter();
+            //sleep_mode_enter();
             break;
 
         default:
@@ -821,6 +821,8 @@ static void advertising_start(bool erase_bonds)
 {
     ret_code_t err_code;
 
+    SEGGER_RTT_printf(0, "advertising_start()\n");
+
     if (erase_bonds == true)
     {
         delete_bonds();
@@ -851,7 +853,7 @@ int main(void)
 {
     bool erase_bonds;
 
-    SEGGER_RTT_printf(0, "Main Start");
+    SEGGER_RTT_printf(0, "\n\nMain Start\n");
 
     // Initialize.
     log_init();
