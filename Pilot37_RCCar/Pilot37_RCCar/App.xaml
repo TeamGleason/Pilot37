@@ -1,0 +1,12 @@
+﻿<Application
+    x:Class="Pilot37_RCCar.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Pilot37_RCCar"
+    RequestedTheme="Light">
+
+    <Application.Resources>
+        <ResourceDictionary Source="Dictionary1.xaml"></ResourceDictionary>
+    </Application.Resources>
+
+</Application>
