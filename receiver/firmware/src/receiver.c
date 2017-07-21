@@ -271,6 +271,8 @@ static void on_disconnect(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
     UNUSED_PARAMETER(p_ble_evt);
     p_receiver->conn_handle = BLE_CONN_HANDLE_INVALID;
     ble_receiver_start_watchdog(p_receiver);
+    ble_receiver_pwm_set_failsafe(p_receiver);
+
 }
 
 #if NOT_YET
@@ -331,6 +333,8 @@ static void on_write(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
 
 void ble_receiver_on_ble_evt(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
 {
+    const ble_gap_evt_t * p_gap_evt = &p_ble_evt->evt.gap_evt;
+
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
@@ -346,6 +350,50 @@ void ble_receiver_on_ble_evt(ble_receiver_t * p_receiver, ble_evt_t * p_ble_evt)
         case BLE_GATTS_EVT_WRITE:
             SEGGER_RTT_printf(0, "GATTS Write");
             on_write(p_receiver, p_ble_evt);
+            break;
+
+        case BLE_GAP_EVT_TIMEOUT:
+            SEGGER_RTT_printf(0, "Request timed out.\n");
+            break;
+
+        case BLE_GAP_EVT_CONN_PARAM_UPDATE:
+            SEGGER_RTT_printf(0, "BLE_GAP_EVT_CONN_PARAM_UPDATE %d %d %d %d\n",
+                        p_gap_evt->params.conn_param_update_request.conn_params.conn_sup_timeout,
+                        p_gap_evt->params.conn_param_update_request.conn_params.max_conn_interval,
+                        p_gap_evt->params.conn_param_update_request.conn_params.min_conn_interval,
+                        p_gap_evt->params.conn_param_update_request.conn_params.slave_latency);
+            break;
+
+        case BLE_GATTS_EVT_EXCHANGE_MTU_REQUEST:
+            SEGGER_RTT_printf(0, "BLE_GATTS_EVT_EXCHANGE_MTU_REQUEST for %d\n",
+                      p_ble_evt->evt.gatts_evt.params.exchange_mtu_request.client_rx_mtu);
+            break;
+
+        case BLE_GAP_EVT_SCAN_REQ_REPORT:
+            SEGGER_RTT_printf(0, "BLE_GAP_EVT_SCAN_REQ_REPORT\n");
+            break;
+
+        case BLE_GATTC_EVT_TIMEOUT:
+
+            SEGGER_RTT_printf(0, "BLE_GATTC_EVT_TIMEOUT\n");
+            break;
+
+        case BLE_GAP_EVT_DATA_LENGTH_UPDATE_REQUEST:
+
+            SEGGER_RTT_printf(0, "BLE_GAP_EVT_DATA_LENGTH_UPDATE_REQUEST %d %d %d %d\n",
+                p_ble_evt->evt.gap_evt.params.data_length_update_request.peer_params.max_rx_octets,
+                p_ble_evt->evt.gap_evt.params.data_length_update_request.peer_params.max_rx_time_us,
+                p_ble_evt->evt.gap_evt.params.data_length_update_request.peer_params.max_tx_octets,
+                p_ble_evt->evt.gap_evt.params.data_length_update_request.peer_params.max_tx_time_us);
+            break;
+
+        case BLE_GAP_EVT_DATA_LENGTH_UPDATE:
+
+            SEGGER_RTT_printf(0, "BLE_GAP_EVT_DATA_LENGTH_UPDATE %d %d %d %d\n",
+                p_ble_evt->evt.gap_evt.params.data_length_update.effective_params.max_tx_time_us,
+                p_ble_evt->evt.gap_evt.params.data_length_update.effective_params.max_tx_octets,
+                p_ble_evt->evt.gap_evt.params.data_length_update.effective_params.max_rx_time_us,
+                p_ble_evt->evt.gap_evt.params.data_length_update.effective_params.max_rx_octets);
             break;
 
         default:
