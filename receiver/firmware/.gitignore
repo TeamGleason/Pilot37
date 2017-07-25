@@ -1,0 +1,5 @@
+*.zip
+gcc-arm-none-eabi
+nRF5-SDK
+nRF5-tools
+_build
