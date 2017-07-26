@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Diagnostics;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
@@ -31,6 +32,12 @@ namespace Pilot37_RCCar
         {
             this.InitializeComponent();
             this.Suspending += OnSuspending;
+            //this.UnhandledException += new UnhandledExceptionEventHandler(App_UnhandledException);
+        }
+
+        private void App_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            Debug.WriteLine("UNHANDLED BABABABA");
         }
 
         /// <summary>

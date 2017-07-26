@@ -40,16 +40,12 @@ namespace Pilot37_RCCar
         private GazePointer _gaze;
 
         private BluetoothLEAdvertisementWatcher bleWatch1;
-        private MediaCapture _mediacCapture1, _mediacCapture2;
-        private DeviceInformation _fpvDevice1, _fpvDevice2;
-        private CaptureElement _frontCam, _backCam;
+        private MediaCapture _mediacCapture1;
+        private DeviceInformation _fpvDevice1;
+        private CaptureElement _frontCam;
 
         private BluetoothLEDevice _nordic = null;
-        private GattDeviceServicesResult _nordicServices = null;
-        private GattCharacteristicsResult _nordicChars = null;
-
-        private Guid _vehicleIDGUID = new Guid("8e9f3738-d80c-0991-c44a-3dab1a06896c");
-        private GattCharacteristic _vehicleIDCharacteristic = null;
+        
         private Guid _heartBeatGUID = new Guid("8e9f3739-d80c-0991-c44a-3dab1a06896c");
         private GattCharacteristic _heartBeatCharacteristic = null;
         private Guid _GPIOGUID = new Guid("8e9f373a-d80c-0991-c44a-3dab1a06896c");
@@ -67,27 +63,29 @@ namespace Pilot37_RCCar
         private ControlStates _previousState;
 
         private bool _ToggleState = true;
-        private bool _controlsEnabled = true;
-        private bool _reverseCamEnabled = true;
-        private int _camCount = 0;
+        private bool _paused = false;
+        private bool _controlsEnabled = false;
+        private int _ticks;
 
-        private const byte SOFT_LEFT_1 = 0xd6;
+        private const byte SOFT_LEFT_1 = 0x2c;
         private const byte SOFT_LEFT_2 = 0x06;
         private const byte SHARP_LEFT_1 = 0xd0;
         private const byte SHARP_LEFT_2 = 0x07;
-        private const byte SOFT_RIGHT_1 = 0xe2;
-        private const byte SOFT_RIGHT_2 = 0x04;
+        private const byte SOFT_RIGHT_1 = 0x89;
+        private const byte SOFT_RIGHT_2 = 0x05;
         private const byte SHARP_RIGHT_1 = 0xe8;
         private const byte SHARP_RIGHT_2 = 0x03;
         private const byte NEUTRAL_1 = 0xdc;
         private const byte NEUTRAL_2 = 0x05;
-        private const byte SLOW_SPEED_1 = 0x0e;
+        private const byte SLOWEST_SPEED_1 = 0x20;
+        private const byte SLOWEST_SPEED_2 = 0x06;
+        private const byte SLOW_SPEED_1 = 0x30;
         private const byte SLOW_SPEED_2 = 0x06;
         private const byte MEDIUM_SPEED_1 = 0x40;
         private const byte MEDIUM_SPEED_2 = 0x06;
         private const byte FAST_SPEED_1 = 0x72;
         private const byte FAST_SPEED_2 = 0x06;
-        private const byte REVERSE_SPEED_1 = 0x78;
+        private const byte REVERSE_SPEED_1 = 0x5f;
         private const byte REVERSE_SPEED_2 = 0x05;
 
 
@@ -129,67 +127,121 @@ namespace Pilot37_RCCar
             _gaze = new GazePointer(this);
             _gaze.CursorRadius = 6;
             _gaze.IsCursorVisible = true;
+            _gaze.Filter = new OneEuroFilter();
 
             _gaze.GazePointerEvent += OnGazePointerEvent;
+            _gaze.EyesOffDelay = 250000;
         }
 
         private void Application_Suspending(object sender, object o)
         {
-            if (_nordic != null)
-            {
-                _nordic.Dispose();
-            }
+            DisconnectFromBLE();
             Debug.WriteLine("Suspending or Closing App!");
-
         }
 
         private void Application_CatchUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            // TODO: Test that this actually works!
+            // TODO: Make this actually work!
             Debug.WriteLine("Unhandled Exception Caught!");
+            DisconnectFromBLE();
+        }
+
+        private void DisconnectFromBLE()
+        {
+            ChangePathFill(_previousButton, _navDefault);
+            _previousButton = StopButton;
+            StopPath.Fill = _gazedUponStop;
+            StateChange(ControlStates.Stop, StopPress);
+
+            if (_alive != null)
+            {
+                _alive.Dispose();
+                _alive = null;
+            }
+
+            if (_heartBeatCharacteristic != null)
+            {
+                if (_heartBeatCharacteristic.Service != null)
+                {
+                    _heartBeatCharacteristic.Service.Dispose();
+                }
+            }
+
+            _heartBeatCharacteristic = null;
+            _GPIOCharacteristic = null;
+            _PWMCharacteristic = null;
+
+            if (_primaryService != null)
+            {
+                _primaryService.Dispose();
+            }
+            _primaryService = null;
+
             if (_nordic != null)
             {
                 _nordic.Dispose();
             }
-        }
+            _nordic = null;
+    }
 
         #region Gaze Event
         private void OnGazePointerEvent(GazePointer sender, GazePointerEventArgs ea)
         {
+            if (!_controlsEnabled)
+            {
+                return;
+            }
+
             // Figure out what part of the GUI is currently being gazed upon
             UIElement _temp = ea.HitTarget;
 
-            // Pass the button that was selected to the event handler to determine the appropriate action
-            if (_temp.ToString().Contains("Button"))
+            // Eyes Off event
+            if (_temp == null)
+            {
+                Debug.WriteLine("Eyes Off Event!");
+                ChangePathFill(_previousButton, _navDefault);
+                _previousButton = StopButton;
+                StopPath.Fill = _gazedUponStop;
+                StateChange(ControlStates.Stop, StopPress);
+            }
+            else if (_temp.ToString().Contains("Button"))
             {
                 Button _button = (Button)ea.HitTarget;
-                Button_Handler(_button);
+
+                switch (ea.State)
+                {
+                    case GazePointerState.Fixation:
+                        if (_button.Equals(PauseButton))
+                        {
+                            return;
+                        }
+                        Button_Handler(_button);
+                        break;
+                    case GazePointerState.Dwell:
+                        if (_button.Equals(PauseButton))
+                        {
+                            PausePress();
+                        }
+                        break;
+                }
             }
         }
 
         // Highlight the button that is currently gazed upon, set _previous, and trigger the appropriate callback
         private void Button_Handler(Button b)
         {
-            ChangePathFill(b, _gazedUpon);
-
-            // Update the GUI so that previously selected buttons return to the correct state when unselected
-            if (_previousButton != null && _previousButton != b)
+            if (_paused)
             {
-                if (_previousButton.Name.Equals("TestButton") || _previousButton.Name.Equals("SettingsButton"))
-                {
-                    _previousButton.Background = _sideDefault;
-                    StopPath.Fill = _navDefault;
-                }
-                else if (_previousButton.Name.Equals("ReverseCameraButton"))
-                {
-                    StopPath.Fill = _navDefault;
-                }
-                else
-                {
-                    ChangePathFill(_previousButton, _navDefault);
-                }
+                // Dont allow for any controls if the app is paused
+                return;
             }
 
+            if (_previousButton != null && _previousButton != b)
+            {
+                ChangePathFill(_previousButton, _navDefault);
+            }
+
+            ChangePathFill(b, _gazedUpon);
             _previousButton = b;
 
             switch (b.Name)
@@ -244,21 +296,6 @@ namespace Pilot37_RCCar
                     break;
                 case "ReverseButton":
                     StateChange(ControlStates.Reverse, ReversePress);
-                    break;
-                case "TestButton":
-                    TestButtonPress();
-                    StopButton.Background = _gazedUponStop;
-                    StateChange(ControlStates.Stop, StopPress);
-                    break;
-                case "SettingsButton":
-                    StopButton.Background = _gazedUponStop;
-                    StateChange(ControlStates.Stop, StopPress);
-                    SettingsPress();
-                    break;
-                case "ReverseCameraButton":
-                    StopButton.Background = _gazedUponStop;
-                    StateChange(ControlStates.Stop, StopPress);
-                    ReverseCameraPress();
                     break;
             }
         }
@@ -337,7 +374,7 @@ namespace Pilot37_RCCar
         {
             await InitializeCameraAsync();
 
-            // Create a watcher to find a BLE Device with name "corten" or "Nordic_HRM"
+            // Create a watcher to find a BLE Device with name "Pilot 37"
             //TODO: Make a filter with the Manufacturer Data/Device ID, not a LocalName string
             BluetoothLEAdvertisement _bleAdv1 = new BluetoothLEAdvertisement();
             _bleAdv1.LocalName = "Pilot 37";
@@ -350,16 +387,6 @@ namespace Pilot37_RCCar
             bleWatch1.Start();
 
             base.OnNavigatedTo(e);
-
-            //   +=============================================+
-            //   |   Bluetooth LE Connection Pop-Up Selection  |
-            //   +=============================================+
-            //
-            //
-            //DevicePicker picker = new DevicePicker();
-            //picker.Filter.SupportedDeviceSelectors.Add(BluetoothLEDevice.GetDeviceSelectorFromPairingState(false));
-            //picker.Filter.SupportedDeviceSelectors.Add(BluetoothLEDevice.GetDeviceSelectorFromPairingState(true));
-            //picker.Show(new Rect(0, 0, 100, 500));
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -378,19 +405,14 @@ namespace Pilot37_RCCar
                 return;
             }
 
-            Debug.WriteLine($"\nBLE Device Found\n\tName: {_nordic.Name}\n\tID: {_nordic.DeviceId}\n\tAddress: {_nordic.BluetoothAddress}\n");
-
             _nordic.ConnectionStatusChanged += NordicDevice_ConnectionChange;
-            _nordicServices = await _nordic.GetGattServicesAsync();
+            var _nordicServices = await _nordic.GetGattServicesAsync();
             var services = _nordicServices.Services;
 
             if (services == null)
             {
                 Debug.WriteLine("Error: Services from BLE Device can not be ascertained!");
-            }
-            else
-            {
-                Debug.WriteLine($"\nThe BLE Device named {_nordic.Name} has the following {services.Count()} services:");
+                return;
             }
 
             foreach (GattDeviceService service in services)
@@ -399,16 +421,12 @@ namespace Pilot37_RCCar
                 {
                     _primaryService = service;
                 }
-
-                Debug.WriteLine($"\tService: {service.Uuid}");
-                _nordicChars = await service.GetCharacteristicsAsync();
+                var _nordicChars = await service.GetCharacteristicsAsync();
                 var characteristics = _nordicChars.Characteristics;
 
                 foreach (GattCharacteristic character in characteristics)
                 {
                     SetEachCharacteristic(character);
-
-                    Debug.WriteLine($"\t\t- Characteristic: {character.Uuid}");
                 }
             }
 
@@ -430,11 +448,6 @@ namespace Pilot37_RCCar
             if (c.Uuid.Equals(_PWMGUID))
             {
                 _PWMCharacteristic = c;
-            }
-
-            if (c.Uuid.Equals(_vehicleIDGUID))
-            {
-                _vehicleIDCharacteristic = c;
             }
         }
 
@@ -462,6 +475,10 @@ namespace Pilot37_RCCar
         private void NordicDevice_ConnectionChange(BluetoothLEDevice sender, object args)
         {
             Debug.WriteLine("Connection status of the BLE device has changed!");
+            // Brief Delay
+            _ticks = Environment.TickCount;
+            while (Environment.TickCount - _ticks < 1234);
+            _controlsEnabled = true;
         }
 
         private async void keepAlive()
@@ -471,35 +488,18 @@ namespace Pilot37_RCCar
 
         private async Task InitializeCameraAsync()
         {
-            if (_mediacCapture1 == null && _mediacCapture2 == null)
+            if (_mediacCapture1 == null)
             {
                 DeviceInformationCollection cameraDevices = await DeviceInformation.FindAllAsync(DeviceClass.VideoCapture);
                 _fpvDevice1 = cameraDevices.First();
-                _fpvDevice2 = cameraDevices.Last();
 
-                // TODO: Make 2 Cameras Work!
+                // TODO: Make 2 Cameras Work Eventually
                 foreach (DeviceInformation device in cameraDevices)
                 {
                     if (device.Name.Contains("USB2.0 PC CAMERA"))
                     {
-                        Debug.WriteLine($"{device.Name.ToString()}");
-                        if (_camCount == 1)
-                        {
-                            _fpvDevice2 = device;
-                            Debug.WriteLine("Cam2 Set!");
-                        }
+                        _fpvDevice1 = device;
 
-                        if (_camCount == 0)
-                        {
-                            _fpvDevice1 = device;
-                            _camCount = 1;
-                            Debug.WriteLine("Cam1 Set!");
-                        }
-
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"Error: Found {device.Name.ToString()} | No external video stream detected!");
                     }
                 }
 
@@ -508,63 +508,21 @@ namespace Pilot37_RCCar
                 Preview1.Source = _mediacCapture1;
                 _frontCam = Preview1;
                 await _frontCam.Source.StartPreviewAsync();
-
-
-                _mediacCapture2 = new MediaCapture();
-                await _mediacCapture2.InitializeAsync(new MediaCaptureInitializationSettings { VideoDeviceId = _fpvDevice2.Id });
-                Preview2.Source = _mediacCapture2;
-                _backCam = Preview2;
-                await _backCam.Source.StartPreviewAsync();
             }
         }
-
-        #region Camera Switching
-        private void SwitchCameraToFront()
-        {
-            if ((_previousState == ControlStates.Reverse || _previousState == ControlStates.Stop))
-            {
-                _frontCam.Visibility = Visibility.Visible;
-                _backCam.Visibility = Visibility.Collapsed;
-            }
-        }
-
-        private void SwitchCameraToBack()
-        {
-            if (_reverseCamEnabled)
-            {
-                _backCam.Visibility = Visibility.Visible;
-                _frontCam.Visibility = Visibility.Collapsed;
-            }
-        }
-
-        private void SwitchCameraView()
-        {
-            if (_frontCam.Visibility == Visibility.Visible)
-            {
-                _frontCam.Visibility = Visibility.Collapsed;
-                _backCam.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                _frontCam.Visibility = Visibility.Visible;
-                _backCam.Visibility = Visibility.Collapsed;
-            }
-        }
-
-        private void SwapCameras()
-        {
-            SwitchCameraView();
-            CaptureElement _placeHolder = _frontCam;
-            _frontCam = _backCam;
-            _backCam = _placeHolder;
-        }
-        #endregion
-
+    
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             if (sender.ToString().Contains("Button"))
             {
                 Button _button = (Button)sender;
+
+                if (_button == PauseButton)
+                {
+                    PausePress();
+                    return;
+                }
+
                 Button_Handler(_button);
             }
         }
@@ -583,7 +541,6 @@ namespace Pilot37_RCCar
         private async void SlowForwardPress()
         {
             Debug.WriteLine("Slow Forward Press\n");
-            SwitchCameraToFront();
             // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { NEUTRAL_1, NEUTRAL_2, SLOW_SPEED_1, SLOW_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardArg); }, null, 0, _controlPeriod);
@@ -592,7 +549,6 @@ namespace Pilot37_RCCar
         private async void MediumForwardPress()
         {
             Debug.WriteLine("Medium Forward Press\n");
-            SwitchCameraToFront();
             // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { NEUTRAL_1, NEUTRAL_2, MEDIUM_SPEED_1, MEDIUM_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardArg); }, null, 0, _controlPeriod);
@@ -601,7 +557,6 @@ namespace Pilot37_RCCar
         private async void FastForwardPress()
         {
             Debug.WriteLine("Fast Forward Press\n");
-            SwitchCameraToFront();
             // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { NEUTRAL_1, NEUTRAL_2, FAST_SPEED_1, FAST_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardArg); }, null, 0, _controlPeriod);
@@ -610,15 +565,13 @@ namespace Pilot37_RCCar
         private async void SlowSharpRightPress()
         {
             Debug.WriteLine("Slow Sharp Right Press\n");
-            SwitchCameraToFront();
             // Steering Control
-            await _PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_RIGHT_1, SHARP_RIGHT_2, SLOW_SPEED_1, SLOW_SPEED_2 }).AsBuffer());
+            await _PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_RIGHT_1, SHARP_RIGHT_2, SLOWEST_SPEED_1, SLOWEST_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardLeftArg); }, null, 0, _controlPeriod);
         }
         private async void SlowSoftRightPress()
         {
             Debug.WriteLine("Slow Soft Right Press\n");
-            SwitchCameraToFront();
             // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { SOFT_RIGHT_1, SOFT_RIGHT_2, SLOW_SPEED_1, SLOW_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardLeftArg); }, null, 0, _controlPeriod);
@@ -627,16 +580,14 @@ namespace Pilot37_RCCar
         private async void SlowSharpLeftPress()
         {
             Debug.WriteLine("Slow Sharp Left Press\n");
-            SwitchCameraToFront();
             // Steering Control
-            await _PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_LEFT_1, SHARP_LEFT_2, SLOW_SPEED_1, SLOW_SPEED_2 }).AsBuffer());
+            await _PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_LEFT_1, SHARP_LEFT_2, SLOWEST_SPEED_1, SLOWEST_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardRightArg); }, null, 0, _controlPeriod);
         }
 
         private async void SlowSoftLeftPress()
         {
             Debug.WriteLine("Slow Soft Left Press\n");
-            SwitchCameraToFront();
             // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { SOFT_LEFT_1, SOFT_LEFT_2, SLOW_SPEED_1, SLOW_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardRightArg); }, null, 0, _controlPeriod);
@@ -645,7 +596,6 @@ namespace Pilot37_RCCar
         private async void MediumSharpRightPress()
         {
             Debug.WriteLine("Medium Sharp Right Press\n");
-            SwitchCameraToFront();
             // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_RIGHT_1, SHARP_RIGHT_2, MEDIUM_SPEED_1, MEDIUM_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardLeftArg); }, null, 0, _controlPeriod);
@@ -653,7 +603,6 @@ namespace Pilot37_RCCar
         private async void MediumSoftRightPress()
         {
             Debug.WriteLine("Medium Soft Right Press\n");
-            SwitchCameraToFront();
             // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { SOFT_RIGHT_1, SOFT_RIGHT_2, MEDIUM_SPEED_1, MEDIUM_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardLeftArg); }, null, 0, _controlPeriod);
@@ -662,7 +611,6 @@ namespace Pilot37_RCCar
         private async void MediumSharpLeftPress()
         {
             Debug.WriteLine("Medium Sharp Left Press\n");
-            SwitchCameraToFront();
             // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_LEFT_1, SHARP_LEFT_2, MEDIUM_SPEED_1, MEDIUM_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardRightArg); }, null, 0, _controlPeriod);
@@ -671,7 +619,6 @@ namespace Pilot37_RCCar
         private async void MediumSoftLeftPress()
         {
             Debug.WriteLine("Medium Soft Left Press\n");
-            SwitchCameraToFront();
             // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { SOFT_LEFT_1, SOFT_LEFT_2, MEDIUM_SPEED_1, MEDIUM_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardRightArg); }, null, 0, _controlPeriod);
@@ -680,7 +627,6 @@ namespace Pilot37_RCCar
         private async void FastSharpRightPress()
         {
             Debug.WriteLine("Fast Sharp Right Press\n");
-            SwitchCameraToFront();
             // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_RIGHT_1, SHARP_RIGHT_2, FAST_SPEED_1, FAST_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardLeftArg); }, null, 0, _controlPeriod);
@@ -688,7 +634,6 @@ namespace Pilot37_RCCar
         private async void FastSoftRightPress()
         {
             Debug.WriteLine("Fast Soft Right Press\n");
-            SwitchCameraToFront();
             // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { SOFT_RIGHT_1, SOFT_RIGHT_2, FAST_SPEED_1, FAST_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardLeftArg); }, null, 0, _controlPeriod);
@@ -697,7 +642,6 @@ namespace Pilot37_RCCar
         private async void FastSharpLeftPress()
         {
             Debug.WriteLine("Fast Sharp Left Press\n");
-            SwitchCameraToFront();
             // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_LEFT_1, SHARP_LEFT_2, FAST_SPEED_1, FAST_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardRightArg); }, null, 0, _controlPeriod);
@@ -706,7 +650,6 @@ namespace Pilot37_RCCar
         private async void FastSoftLeftPress()
         {
             Debug.WriteLine("Fast Soft Left Press\n");
-            SwitchCameraToFront();
             // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { SOFT_LEFT_1, SOFT_LEFT_2, FAST_SPEED_1, FAST_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardRightArg); }, null, 0, _controlPeriod);
@@ -723,44 +666,38 @@ namespace Pilot37_RCCar
         private async void ReversePress()
         {
             Debug.WriteLine("Reverse Press\n");
-            SwitchCameraToBack();
             // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { NEUTRAL_1, NEUTRAL_2, REVERSE_SPEED_1, REVERSE_SPEED_2 }).AsBuffer());
-            //_control = new System.Threading.Timer(state => { SendBLEControl(someReverseArg); }, null, 0, _controlPeriod);
         }
 
-        private void SettingsPress()
+        private async void PausePress()
         {
-            SwapCameras();
-        }
-
-        private void ReverseCameraPress()
-        {
-            if (_reverseCamEnabled)
+            if (_controlsEnabled)
             {
-                if (_previousState == ControlStates.Reverse)
-                {
-                    _backCam.Visibility = Visibility.Collapsed;
-                    _frontCam.Visibility = Visibility.Visible;
-                }
-                ReverseCameraButton.Background = new SolidColorBrush(Colors.Red);
-            }
-            else
-            {
-                if (_previousState == ControlStates.Reverse)
-                {
-                    _backCam.Visibility = Visibility.Visible;
-                    _frontCam.Visibility = Visibility.Collapsed;
-                }
-                ReverseCameraButton.Background = new SolidColorBrush(Colors.Green);
+                // Steering Control
+                await _PWMCharacteristic.WriteValueAsync((new byte[] { NEUTRAL_1, NEUTRAL_2, NEUTRAL_1, NEUTRAL_2 }).AsBuffer());
+                //_control = new System.Threading.Timer(state => { SendBLEControl(someStopArg); }, null, 0, _controlPeriod);
             }
 
-            _reverseCamEnabled = !_reverseCamEnabled;
-        }
+            _paused = !_paused;
 
-        private void TestButtonPress()
-        {
-            ToggleLED();
+            if (_previousButton != null && _previousButton != PauseButton)
+            {
+                ChangePathFill(_previousButton, _navDefault);
+            }
+
+            StopPath.Fill = _gazedUponStop;
+
+            if (_paused)
+            {
+                PauseButton.Background = _gazedUpon;
+                _previousButton = PauseButton;
+            } else
+            {
+                PauseButton.Background = _sideDefault;
+                _previousButton = StopButton;
+                StateChange(ControlStates.Stop, StopPress);
+            }
         }
         #endregion
     }
