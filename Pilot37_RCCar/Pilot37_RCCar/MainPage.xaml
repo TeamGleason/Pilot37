@@ -63,7 +63,7 @@
                 </Button>
                 
                 <Button x:Name="StopButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="175" Width="175" Margin="502,567,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Background="#FFA0A0A0">
-                    <Ellipse xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Canvas.Left="1.9" Canvas.Top="1.8" x:Name="StopPath" Fill="AliceBlue" Margin="-75.333,-72.333,-73.667,-74.667" Width="150" Height="150"/>
+                    <Ellipse xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Canvas.Left="1.9" Canvas.Top="1.8" x:Name="StopPath" Fill="Red" Margin="-75.333,-72.333,-73.667,-74.667" Width="150" Height="150"/>
                 </Button>
                 
                 <Button x:Name="ReverseButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="199" Width="322" Margin="427,721,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Background="#FFA0A0A0">

@@ -115,6 +115,7 @@ namespace Pilot37_RCCar
         public MainPage()
         {
             InitializeComponent();
+            _previousButton = StopButton;
             Loaded += new RoutedEventHandler(MainPage_OnLoaded);
             Application.Current.Resuming += Application_Resuming;
             Application.Current.Suspending += Application_Suspending;
@@ -136,7 +137,6 @@ namespace Pilot37_RCCar
         private void Application_Suspending(object sender, object o)
         {
             DisconnectFromBLE();
-            Debug.WriteLine("Suspending or Closing App!");
         }
 
         private void Application_CatchUnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -148,11 +148,13 @@ namespace Pilot37_RCCar
 
         private void DisconnectFromBLE()
         {
+            // Place the RC Car into a safe STOP state
             ChangePathFill(_previousButton, _navDefault);
             _previousButton = StopButton;
             StopPath.Fill = _gazedUponStop;
             StateChange(ControlStates.Stop, StopPress);
 
+            // Dispose all BLE related variables
             if (_alive != null)
             {
                 _alive.Dispose();
@@ -204,6 +206,7 @@ namespace Pilot37_RCCar
                 StopPath.Fill = _gazedUponStop;
                 StateChange(ControlStates.Stop, StopPress);
             }
+            // Button Selection event
             else if (_temp.ToString().Contains("Button"))
             {
                 Button _button = (Button)ea.HitTarget;
@@ -430,6 +433,9 @@ namespace Pilot37_RCCar
                 }
             }
 
+            // Now that we are connected, begin our Heartbeat communication
+            _controlsEnabled = true;
+            Debug.WriteLine("BLE Connection Status: CONNECTED");
             _alive = new System.Threading.Timer(state => { keepAlive(); }, null, 0, _alivePeriod);
         }
 
@@ -453,7 +459,7 @@ namespace Pilot37_RCCar
 
         private void BLEWatcher_Stopped(BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementWatcherStoppedEventArgs args)
         {
-            Debug.WriteLine("STOPPED: Test! Should only print when BLE is advertising!");
+            Debug.WriteLine("BLE Watcher has STOPPED");
         }
 
         private async void ToggleLED()
@@ -474,16 +480,23 @@ namespace Pilot37_RCCar
         // Invoked every time the BLE device connects or disconnects
         private void NordicDevice_ConnectionChange(BluetoothLEDevice sender, object args)
         {
-            Debug.WriteLine("Connection status of the BLE device has changed!");
+            if (_controlsEnabled)
+            {
+                Debug.WriteLine("BLE Connection Status: DISCONNECTED");
+                _controlsEnabled = false;
+            }
+
             // Brief Delay
             _ticks = Environment.TickCount;
-            while (Environment.TickCount - _ticks < 1234);
-            _controlsEnabled = true;
+            while (Environment.TickCount - _ticks < 1000);
         }
 
         private async void keepAlive()
         {
-            await _heartBeatCharacteristic.WriteValueAsync((new byte[] { 1 }).AsBuffer());
+            if (_controlsEnabled)
+            {
+                await _heartBeatCharacteristic.WriteValueAsync((new byte[] { 1 }).AsBuffer());
+            }
         }
 
         private async Task InitializeCameraAsync()
@@ -510,7 +523,8 @@ namespace Pilot37_RCCar
                 await _frontCam.Source.StartPreviewAsync();
             }
         }
-    
+
+        #region Button Callbacks
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             if (sender.ToString().Contains("Button"))
@@ -527,7 +541,6 @@ namespace Pilot37_RCCar
             }
         }
 
-        #region Button Callbacks
         private void StateChange(ControlStates state, Action func)
         {
             if (_controlState != state && _controlsEnabled)
