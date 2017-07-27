@@ -43,119 +43,38 @@
                 <ColumnDefinition />
             </Grid.ColumnDefinitions>
 
-            <Button x:Name="PauseButton" Opacity="0.2" Grid.Row="1" Grid.Column="0" Content="Pause" Background="Blue" Foreground="White" FontFamily="Segoe UI Symbol" FontSize="28" Grid.RowSpan="2"  Click="Button_Click" Margin="-60,0,0,57" VerticalAlignment="Bottom" Height="80" Width="110" />
+            <Button x:Name="PauseButton" Opacity="0.2" Grid.Row="12" Grid.Column="0" Content="Pause" Background="Blue" Foreground="White" FontFamily="Segoe UI Symbol" FontSize="28" Grid.RowSpan="2"  Click="Button_Click" Margin="-60,0,0,57" VerticalAlignment="Bottom" Height="80" Width="110" />
 
-            <Grid x:Name="ControlButtons" Grid.ColumnSpan="12" Grid.RowSpan="14" Width="1200" Height="965" Margin="20,-15,20,10" VerticalAlignment="Bottom" RenderTransformOrigin="0.5,0.5">
+            <Grid x:Name="ControlButtons" Grid.ColumnSpan="12" Grid.RowSpan="14" Width="1400" Height="965" Margin="-80,-15,-80,10" VerticalAlignment="Bottom" RenderTransformOrigin="0.5,0.5">
                 <Grid.RenderTransform>
                     <CompositeTransform Rotation="-0"/>
                 </Grid.RenderTransform>
-                
-                <Button x:Name="SlowForwardButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="107" Width="161" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="508,433,0,0">
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="SlowForwardPath" Fill="AliceBlue" Data="M103 11.9L77.9 83.3c-8.6-3.1-17.9-4.7-27.5-4.7c-8.8 0-17.3 1.4-25.3 4L1.5 10.6c15.4-5 31.8-7.7 48.9-7.7     C68.8 2.9 86.6 6.1 103 11.9z" Margin="-7,-6,-9.667,-6" Stretch="Fill" UseLayoutRounding="False"/>
-                </Button>
-                
-                <Button x:Name="MediumForwardButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="141" Width="286" Margin="446,262,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click">
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="MediumForwardPath" Fill="AliceBlue" Data="M164.3 16.4l-25.1 71.4c-18.5-6.6-38.4-10.2-59.2-10.2c-19 0-37.2 3-54.3 8.5v0L2 14.2     c24.5-8 50.8-12.3 78-12.3C109.6 1.9 137.9 7 164.3 16.4z" Margin="-7.517,-6,-9.667,-6" Stretch="Fill" UseLayoutRounding="False"/>
-                </Button>
-                
-                <Button x:Name="FastForwardButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="145" Width="397" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="392,95,0,0">
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="FastForwardPath" Fill="AliceBlue" Data="M225 21l-25.2 71.4c-28.3-10-58.8-15.5-90.6-15.5c-29.3 0-57.4 4.6-83.8 13.2L1.8 18.1    c33.8-11 70-17 107.5-17C149.8 1.2 188.8 8.1 225 21z" Margin="-10,-6" Stretch="Fill" UseLayoutRounding="False"/>
-                </Button>
-                
-                <Button x:Name="StopButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="175" Width="175" Margin="502,567,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Background="#FFA0A0A0">
-                    <Ellipse xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Canvas.Left="1.9" Canvas.Top="1.8" x:Name="StopPath" Fill="Red" Margin="-75.333,-72.333,-73.667,-74.667" Width="150" Height="150"/>
-                </Button>
-                
-                <Button x:Name="ReverseButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="199" Width="322" Margin="427,721,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Background="#FFA0A0A0">
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="ReversePath" Fill="AliceBlue" Data="M171.4 1.7l53.8 53.2c-28.6 28.9-68.3 46.9-112.2 46.9c-43.5 0-83-17.7-111.5-46.2L55.1 2     c14.8 14.8 35.3 24 58 24C135.9 26.1 156.5 16.7 171.4 1.7z" Margin="-10,14.667,-10,19.333" Stretch="Fill" UseLayoutRounding="False"/>
-                </Button>
-                
-                <Button x:Name="SlowSoftRightButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="107" Width="161" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="638.174,498.238,0,0" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
+
+                <Button x:Name="SlowForwardButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="110" Width="300" Margin="556,231,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Background="AliceBlue"/>
+
+                <Button x:Name="FastForwardButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="110" Width="400" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="506,100,0,0" Background="AliceBlue"/>
+
+                <Button x:Name="StopButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="110" Width="300" Margin="556,716,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Background="Red"/>
+
+                <Button x:Name="ReverseButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="110" Width="400" Margin="506,847,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Background="AliceBlue"/>
+
+                <Button x:Name="SoftRightButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="125" Width="125" Margin="1017.334,159,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Background="AliceBlue" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
                     <Button.RenderTransform>
-                        <CompositeTransform Rotation="53"/>
+                        <CompositeTransform Rotation="45"/>
                     </Button.RenderTransform>
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="SlowSoftRightPath" Fill="AliceBlue" Data="M103 11.9L77.9 83.3c-8.6-3.1-17.9-4.7-27.5-4.7c-8.8 0-17.3 1.4-25.3 4L1.5 10.6c15.4-5 31.8-7.7 48.9-7.7     C68.8 2.9 86.6 6.1 103 11.9z" Margin="-7,-6,-9.667,-6" Stretch="Fill" UseLayoutRounding="False"/>
                 </Button>
-                
-                <Button x:Name="SlowSharpRightButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="107" Width="161" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="669.333,638.221,0,0" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
+
+                <Button x:Name="SoftLeftButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="125" Width="125" Margin="269.999,158.001,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Background="AliceBlue" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
                     <Button.RenderTransform>
-                        <CompositeTransform Rotation="101"/>
+                        <CompositeTransform Rotation="-45"/>
                     </Button.RenderTransform>
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="SlowSharpRightPath" Fill="AliceBlue" Data="M103 11.9L77.9 83.3c-8.6-3.1-17.9-4.7-27.5-4.7c-8.8 0-17.3 1.4-25.3 4L1.5 10.6c15.4-5 31.8-7.7 48.9-7.7     C68.8 2.9 86.6 6.1 103 11.9z" Margin="-7,-6,-9.667,-6" Stretch="Fill" UseLayoutRounding="False" RenderTransformOrigin="0.5,0.5"/>
                 </Button>
-                
-                <Button x:Name="SlowSoftLeftButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="107" Width="161" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="377.953,497.143,0,0" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
-                    <Button.RenderTransform>
-                        <CompositeTransform Rotation="-53"/>
-                    </Button.RenderTransform>
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="SlowSoftLeftPath" Fill="AliceBlue" Data="M103 11.9L77.9 83.3c-8.6-3.1-17.9-4.7-27.5-4.7c-8.8 0-17.3 1.4-25.3 4L1.5 10.6c15.4-5 31.8-7.7 48.9-7.7     C68.8 2.9 86.6 6.1 103 11.9z" Margin="-7,-6,-9.667,-6" Stretch="Fill" UseLayoutRounding="False" RenderTransformOrigin="0.5,0.5"/>
-                </Button>
-                
-                <Button x:Name="SlowSharpLeftButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="107" Width="161" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="345.762,636.19,0,0" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
-                    <Button.RenderTransform>
-                        <CompositeTransform Rotation="-100"/>
-                    </Button.RenderTransform>
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="SlowSharpLeftPath" Fill="AliceBlue" Data="M103 11.9L77.9 83.3c-8.6-3.1-17.9-4.7-27.5-4.7c-8.8 0-17.3 1.4-25.3 4L1.5 10.6c15.4-5 31.8-7.7 48.9-7.7     C68.8 2.9 86.6 6.1 103 11.9z" Margin="-7,-6,-9.667,-6" Stretch="Fill" UseLayoutRounding="False"/>
-                </Button>
-                
-                <Button x:Name="MediumSoftRightButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="141" Width="286" Margin="696,389,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
-                    <Button.RenderTransform>
-                        <CompositeTransform Rotation="53"/>
-                    </Button.RenderTransform>
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="MediumSoftRightPath" Fill="AliceBlue" Data="M164.3 16.4l-25.1 71.4c-18.5-6.6-38.4-10.2-59.2-10.2c-19 0-37.2 3-54.3 8.5v0L2 14.2     c24.5-8 50.8-12.3 78-12.3C109.6 1.9 137.9 7 164.3 16.4z" Margin="-7.517,-6,-9.667,-6" Stretch="Fill" UseLayoutRounding="False"/>
-                </Button>
-                
-                <Button x:Name="MediumSoftLeftButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="141" Width="286" Margin="193,384,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
-                    <Button.RenderTransform>
-                        <CompositeTransform Rotation="-53"/>
-                    </Button.RenderTransform>
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="MediumSoftLeftPath" Fill="AliceBlue" Data="M164.3 16.4l-25.1 71.4c-18.5-6.6-38.4-10.2-59.2-10.2c-19 0-37.2 3-54.3 8.5v0L2 14.2     c24.5-8 50.8-12.3 78-12.3C109.6 1.9 137.9 7 164.3 16.4z" Margin="-7.517,-6,-9.667,-6" Stretch="Fill" UseLayoutRounding="False"/>
-                </Button>
-                
-                <Button x:Name="MediumSharpLeftButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="141" Width="286" Margin="127.833,643,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
-                    <Button.RenderTransform>
-                        <CompositeTransform Rotation="-100"/>
-                    </Button.RenderTransform>
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="MediumSharpLeftPath" Fill="AliceBlue" Data="M164.3 16.4l-25.1 71.4c-18.5-6.6-38.4-10.2-59.2-10.2c-19 0-37.2 3-54.3 8.5v0L2 14.2     c24.5-8 50.8-12.3 78-12.3C109.6 1.9 137.9 7 164.3 16.4z" Margin="-7.517,-6,-9.667,-6" Stretch="Fill" UseLayoutRounding="False"/>
-                </Button>
-                
-                <Button x:Name="MediumSharpRightButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="141" Width="286" Margin="756.833,652,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
-                    <Button.RenderTransform>
-                        <CompositeTransform Rotation="100"/>
-                    </Button.RenderTransform>
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="MediumSharpRightPath" Fill="AliceBlue" Data="M164.3 16.4l-25.1 71.4c-18.5-6.6-38.4-10.2-59.2-10.2c-19 0-37.2 3-54.3 8.5v0L2 14.2     c24.5-8 50.8-12.3 78-12.3C109.6 1.9 137.9 7 164.3 16.4z" Margin="-7.517,-6,-9.667,-6" Stretch="Fill" UseLayoutRounding="False"/>
-                </Button>
-                
-                <Button x:Name="FastSoftRightButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="159" Width="397" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="775,281.5,0,0" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
-                    <Button.RenderTransform>
-                        <CompositeTransform Rotation="53"/>
-                    </Button.RenderTransform>
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="FastSoftRightPath" Fill="AliceBlue" Data="M225 21l-25.2 71.4c-28.3-10-58.8-15.5-90.6-15.5c-29.3 0-57.4 4.6-83.8 13.2L1.8 18.1    c33.8-11 70-17 107.5-17C149.8 1.2 188.8 8.1 225 21z" Margin="-10,-6" Stretch="Fill" UseLayoutRounding="False"/>
-                </Button>
-                
-                <Button x:Name="FastSoftLeftButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="159" Width="397" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="-0.5,269.5,0,0" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
-                    <Button.RenderTransform>
-                        <CompositeTransform Rotation="-53"/>
-                    </Button.RenderTransform>
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="FastSoftLeftPath" Fill="AliceBlue" Data="M225 21l-25.2 71.4c-28.3-10-58.8-15.5-90.6-15.5c-29.3 0-57.4 4.6-83.8 13.2L1.8 18.1    c33.8-11 70-17 107.5-17C149.8 1.2 188.8 8.1 225 21z" Margin="-10,-6" Stretch="Fill" UseLayoutRounding="False"/>
-                </Button>
-                
-                <Button x:Name="FastSharpRightButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="159" Width="397" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="864,672.5,-61,0" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
-                    <Button.RenderTransform>
-                        <CompositeTransform Rotation="100"/>
-                    </Button.RenderTransform>
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="FastSharpRightPath" Fill="AliceBlue" Data="M225 21l-25.2 71.4c-28.3-10-58.8-15.5-90.6-15.5c-29.3 0-57.4 4.6-83.8 13.2L1.8 18.1    c33.8-11 70-17 107.5-17C149.8 1.2 188.8 8.1 225 21z" Margin="-10,-6" Stretch="Fill" UseLayoutRounding="False"/>
-                </Button>
-                
-                <Button x:Name="FastSharpLeftButton" Opacity="0.3" Style="{StaticResource CustomButton}" HorizontalAlignment="Left" VerticalAlignment="Top" Height="159" Width="397" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="-98,659.5,0,0" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
-                    <Button.RenderTransform>
-                        <CompositeTransform Rotation="-100"/>
-                    </Button.RenderTransform>
-                    <Path xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="FastSharpLeftPath" Fill="AliceBlue" Data="M225 21l-25.2 71.4c-28.3-10-58.8-15.5-90.6-15.5c-29.3 0-57.4 4.6-83.8 13.2L1.8 18.1    c33.8-11 70-17 107.5-17C149.8 1.2 188.8 8.1 225 21z" Margin="-10,-6" Stretch="Fill" UseLayoutRounding="False"/>
-                </Button>
+
+                <Button x:Name="SharpRightButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="125" Width="125" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="1234,158,0,0" Background="AliceBlue"/>
+
+                <Button x:Name="SharpLeftButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="125" Width="125" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="55,158,0,0" Background="AliceBlue"/>
 
             </Grid>
-
         </Grid>
     </Grid>
 </Page>

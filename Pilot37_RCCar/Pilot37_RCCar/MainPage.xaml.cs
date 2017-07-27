@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
@@ -11,7 +12,7 @@ using Windows.UI;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
+using Windows.UI.Core;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
@@ -94,20 +95,11 @@ namespace Pilot37_RCCar
             Stop,
             Reverse,
             SlowForward,
-            MediumForward,
             FastForward,
-            SlowSoftLeft,
-            SlowSharpLeft,
-            SlowSoftRight,
-            SlowSharpRight,
-            MediumSoftLeft,
-            MediumSharpLeft,
-            MediumSoftRight,
-            MediumSharpRight,
-            FastSoftLeft,
-            FastSharpLeft,
-            FastSoftRight,
-            FastSharpRight
+            SoftLeft,
+            SharpLeft,
+            SoftRight,
+            SharpRight
         }
 
         ControlStates _controlState = ControlStates.Stop;
@@ -141,18 +133,18 @@ namespace Pilot37_RCCar
 
         private void Application_CatchUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            // TODO: Make this actually work!
+            // TODO: Make this exception handling work!
             Debug.WriteLine("Unhandled Exception Caught!");
+            e.Handled = true;
+            PauseButton.Background = _gazedUponStop;
             DisconnectFromBLE();
         }
 
+        // TODO: Remove the DeviceWatcher object
         private void DisconnectFromBLE()
         {
             // Place the RC Car into a safe STOP state
-            ChangePathFill(_previousButton, _navDefault);
-            _previousButton = StopButton;
-            StopPath.Fill = _gazedUponStop;
-            StateChange(ControlStates.Stop, StopPress);
+            Stop();
 
             // Dispose all BLE related variables
             if (_alive != null)
@@ -201,10 +193,7 @@ namespace Pilot37_RCCar
             if (_temp == null)
             {
                 Debug.WriteLine("Eyes Off Event!");
-                ChangePathFill(_previousButton, _navDefault);
-                _previousButton = StopButton;
-                StopPath.Fill = _gazedUponStop;
-                StateChange(ControlStates.Stop, StopPress);
+                Stop();
             }
             // Button Selection event
             else if (_temp.ToString().Contains("Button"))
@@ -235,16 +224,21 @@ namespace Pilot37_RCCar
         {
             if (_paused)
             {
-                // Dont allow for any controls if the app is paused
                 return;
             }
 
             if (_previousButton != null && _previousButton != b)
             {
-                ChangePathFill(_previousButton, _navDefault);
+                if (_previousButton == PauseButton)
+                {
+                    _previousButton.Background = _sideDefault;
+                } else
+                {
+                    _previousButton.Background = _navDefault;
+                }
             }
 
-            ChangePathFill(b, _gazedUpon);
+            b.Background = _gazedUpon;
             _previousButton = b;
 
             switch (b.Name)
@@ -252,117 +246,27 @@ namespace Pilot37_RCCar
                 case "SlowForwardButton":
                     StateChange(ControlStates.SlowForward, SlowForwardPress);
                     break;
-                case "MediumForwardButton":
-                    StateChange(ControlStates.MediumForward, MediumForwardPress);
-                    break;
                 case "FastForwardButton":
                     StateChange(ControlStates.FastForward, FastForwardPress);
                     break;
-                case "SlowSoftLeftButton":
-                    StateChange(ControlStates.SlowSoftLeft, SlowSoftLeftPress);
+                case "SoftLeftButton":
+                    StateChange(ControlStates.SoftLeft, SoftLeftPress);
                     break;
-                case "SlowSoftRightButton":
-                    StateChange(ControlStates.SlowSoftRight, SlowSoftRightPress);
+                case "SoftRightButton":
+                    StateChange(ControlStates.SoftRight, SoftRightPress);
                     break;
-                case "SlowSharpLeftButton":
-                    StateChange(ControlStates.SlowSharpLeft, SlowSharpLeftPress);
+                case "SharpLeftButton":
+                    StateChange(ControlStates.SharpLeft, SharpLeftPress);
                     break;
-                case "SlowSharpRightButton":
-                    StateChange(ControlStates.SlowSharpRight, SlowSharpRightPress);
-                    break;
-                case "MediumSoftLeftButton":
-                    StateChange(ControlStates.MediumSoftLeft, MediumSoftLeftPress);
-                    break;
-                case "MediumSoftRightButton":
-                    StateChange(ControlStates.MediumSoftRight, MediumSoftRightPress);
-                    break;
-                case "MediumSharpLeftButton":
-                    StateChange(ControlStates.MediumSharpLeft, MediumSharpLeftPress);
-                    break;
-                case "MediumSharpRightButton":
-                    StateChange(ControlStates.MediumSharpRight, MediumSharpRightPress);
-                    break;
-                case "FastSoftLeftButton":
-                    StateChange(ControlStates.FastSoftLeft, FastSoftLeftPress);
-                    break;
-                case "FastSoftRightButton":
-                    StateChange(ControlStates.FastSoftRight, FastSoftRightPress);
-                    break;
-                case "FastSharpLeftButton":
-                    StateChange(ControlStates.FastSharpLeft, FastSharpLeftPress);
-                    break;
-                case "FastSharpRightButton":
-                    StateChange(ControlStates.FastSharpRight, FastSharpRightPress);
+                case "SharpRightButton":
+                    StateChange(ControlStates.SharpRight, SharpRightPress);
                     break;
                 case "StopButton":
+                    StopButton.Background = _gazedUponStop;
                     StateChange(ControlStates.Stop, StopPress);
                     break;
                 case "ReverseButton":
                     StateChange(ControlStates.Reverse, ReversePress);
-                    break;
-            }
-        }
-
-        private void ChangePathFill(Button b, SolidColorBrush color)
-        {
-            switch (b.Name)
-            {
-                case "StopButton":
-                    if (color.Equals(_gazedUpon))
-                    {
-                        StopPath.Fill = _gazedUponStop;
-                    } else
-                    {
-                        StopPath.Fill = color;
-                    }
-                    break;
-                case "ReverseButton":
-                    ReversePath.Fill = color;
-                    break;
-                case "SlowForwardButton":
-                    SlowForwardPath.Fill = color;
-                    break;
-                case "MediumForwardButton":
-                    MediumForwardPath.Fill = color;
-                    break;
-                case "FastForwardButton":
-                    FastForwardPath.Fill = color;
-                    break;
-                case "SlowSoftLeftButton":
-                    SlowSoftLeftPath.Fill = color;
-                    break;
-                case "SlowSoftRightButton":
-                    SlowSoftRightPath.Fill = color;
-                    break;
-                case "SlowSharpLeftButton":
-                    SlowSharpLeftPath.Fill = color;
-                    break;
-                case "SlowSharpRightButton":
-                    SlowSharpRightPath.Fill = color;
-                    break;
-                case "MediumSoftLeftButton":
-                    MediumSoftLeftPath.Fill = color;
-                    break;
-                case "MediumSoftRightButton":
-                    MediumSoftRightPath.Fill = color;
-                    break;
-                case "MediumSharpLeftButton":
-                    MediumSharpLeftPath.Fill = color;
-                    break;
-                case "MediumSharpRightButton":
-                    MediumSharpRightPath.Fill = color;
-                    break;
-                case "FastSoftLeftButton":
-                    FastSoftLeftPath.Fill = color;
-                    break;
-                case "FastSoftRightButton":
-                    FastSoftRightPath.Fill = color;
-                    break;
-                case "FastSharpLeftButton":
-                    FastSharpLeftPath.Fill = color;
-                    break;
-                case "FastSharpRightButton":
-                    FastSharpRightPath.Fill = color;
                     break;
             }
         }
@@ -434,8 +338,11 @@ namespace Pilot37_RCCar
             }
 
             // Now that we are connected, begin our Heartbeat communication
-            _controlsEnabled = true;
             Debug.WriteLine("BLE Connection Status: CONNECTED");
+            // Brief Delay
+            _ticks = Environment.TickCount;
+            while (Environment.TickCount - _ticks < 2000);
+            _controlsEnabled = true;
             _alive = new System.Threading.Timer(state => { keepAlive(); }, null, 0, _alivePeriod);
         }
 
@@ -484,11 +391,13 @@ namespace Pilot37_RCCar
             {
                 Debug.WriteLine("BLE Connection Status: DISCONNECTED");
                 _controlsEnabled = false;
+                Helper();
             }
+        }
 
-            // Brief Delay
-            _ticks = Environment.TickCount;
-            while (Environment.TickCount - _ticks < 1000);
+        private async Task Helper()
+        {
+            await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { Stop(); });
         }
 
         private async void keepAlive()
@@ -496,6 +405,7 @@ namespace Pilot37_RCCar
             if (_controlsEnabled)
             {
                 await _heartBeatCharacteristic.WriteValueAsync((new byte[] { 1 }).AsBuffer());
+                //'The object has been closed. (Exception from HRESULT: 0x80000013)'
             }
         }
 
@@ -522,6 +432,14 @@ namespace Pilot37_RCCar
                 _frontCam = Preview1;
                 await _frontCam.Source.StartPreviewAsync();
             }
+        }
+
+        private void Stop()
+        {
+            _previousButton.Background = _navDefault;
+            _previousButton = StopButton;
+            StopButton.Background = _gazedUponStop;
+            StateChange(ControlStates.Stop, StopPress);
         }
 
         #region Button Callbacks
@@ -554,16 +472,7 @@ namespace Pilot37_RCCar
         private async void SlowForwardPress()
         {
             Debug.WriteLine("Slow Forward Press\n");
-            // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { NEUTRAL_1, NEUTRAL_2, SLOW_SPEED_1, SLOW_SPEED_2 }).AsBuffer());
-            //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardArg); }, null, 0, _controlPeriod);
-        }
-
-        private async void MediumForwardPress()
-        {
-            Debug.WriteLine("Medium Forward Press\n");
-            // Steering Control
-            await _PWMCharacteristic.WriteValueAsync((new byte[] { NEUTRAL_1, NEUTRAL_2, MEDIUM_SPEED_1, MEDIUM_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardArg); }, null, 0, _controlPeriod);
         }
 
@@ -575,103 +484,36 @@ namespace Pilot37_RCCar
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardArg); }, null, 0, _controlPeriod);
         }
 
-        private async void SlowSharpRightPress()
+        private async void SharpRightPress()
         {
             Debug.WriteLine("Slow Sharp Right Press\n");
-            // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_RIGHT_1, SHARP_RIGHT_2, SLOWEST_SPEED_1, SLOWEST_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardLeftArg); }, null, 0, _controlPeriod);
         }
-        private async void SlowSoftRightPress()
+        private async void SoftRightPress()
         {
             Debug.WriteLine("Slow Soft Right Press\n");
-            // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { SOFT_RIGHT_1, SOFT_RIGHT_2, SLOW_SPEED_1, SLOW_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardLeftArg); }, null, 0, _controlPeriod);
         }
 
-        private async void SlowSharpLeftPress()
+        private async void SharpLeftPress()
         {
             Debug.WriteLine("Slow Sharp Left Press\n");
-            // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_LEFT_1, SHARP_LEFT_2, SLOWEST_SPEED_1, SLOWEST_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardRightArg); }, null, 0, _controlPeriod);
         }
 
-        private async void SlowSoftLeftPress()
+        private async void SoftLeftPress()
         {
             Debug.WriteLine("Slow Soft Left Press\n");
-            // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { SOFT_LEFT_1, SOFT_LEFT_2, SLOW_SPEED_1, SLOW_SPEED_2 }).AsBuffer());
-            //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardRightArg); }, null, 0, _controlPeriod);
-        }
-
-        private async void MediumSharpRightPress()
-        {
-            Debug.WriteLine("Medium Sharp Right Press\n");
-            // Steering Control
-            await _PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_RIGHT_1, SHARP_RIGHT_2, MEDIUM_SPEED_1, MEDIUM_SPEED_2 }).AsBuffer());
-            //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardLeftArg); }, null, 0, _controlPeriod);
-        }
-        private async void MediumSoftRightPress()
-        {
-            Debug.WriteLine("Medium Soft Right Press\n");
-            // Steering Control
-            await _PWMCharacteristic.WriteValueAsync((new byte[] { SOFT_RIGHT_1, SOFT_RIGHT_2, MEDIUM_SPEED_1, MEDIUM_SPEED_2 }).AsBuffer());
-            //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardLeftArg); }, null, 0, _controlPeriod);
-        }
-
-        private async void MediumSharpLeftPress()
-        {
-            Debug.WriteLine("Medium Sharp Left Press\n");
-            // Steering Control
-            await _PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_LEFT_1, SHARP_LEFT_2, MEDIUM_SPEED_1, MEDIUM_SPEED_2 }).AsBuffer());
-            //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardRightArg); }, null, 0, _controlPeriod);
-        }
-
-        private async void MediumSoftLeftPress()
-        {
-            Debug.WriteLine("Medium Soft Left Press\n");
-            // Steering Control
-            await _PWMCharacteristic.WriteValueAsync((new byte[] { SOFT_LEFT_1, SOFT_LEFT_2, MEDIUM_SPEED_1, MEDIUM_SPEED_2 }).AsBuffer());
-            //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardRightArg); }, null, 0, _controlPeriod);
-        }
-
-        private async void FastSharpRightPress()
-        {
-            Debug.WriteLine("Fast Sharp Right Press\n");
-            // Steering Control
-            await _PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_RIGHT_1, SHARP_RIGHT_2, FAST_SPEED_1, FAST_SPEED_2 }).AsBuffer());
-            //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardLeftArg); }, null, 0, _controlPeriod);
-        }
-        private async void FastSoftRightPress()
-        {
-            Debug.WriteLine("Fast Soft Right Press\n");
-            // Steering Control
-            await _PWMCharacteristic.WriteValueAsync((new byte[] { SOFT_RIGHT_1, SOFT_RIGHT_2, FAST_SPEED_1, FAST_SPEED_2 }).AsBuffer());
-            //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardLeftArg); }, null, 0, _controlPeriod);
-        }
-
-        private async void FastSharpLeftPress()
-        {
-            Debug.WriteLine("Fast Sharp Left Press\n");
-            // Steering Control
-            await _PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_LEFT_1, SHARP_LEFT_2, FAST_SPEED_1, FAST_SPEED_2 }).AsBuffer());
-            //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardRightArg); }, null, 0, _controlPeriod);
-        }
-
-        private async void FastSoftLeftPress()
-        {
-            Debug.WriteLine("Fast Soft Left Press\n");
-            // Steering Control
-            await _PWMCharacteristic.WriteValueAsync((new byte[] { SOFT_LEFT_1, SOFT_LEFT_2, FAST_SPEED_1, FAST_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardRightArg); }, null, 0, _controlPeriod);
         }
 
         private async void StopPress()
         {
             Debug.WriteLine("Stop Press\n");
-            // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { NEUTRAL_1, NEUTRAL_2, NEUTRAL_1, NEUTRAL_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someStopArg); }, null, 0, _controlPeriod);
         }
@@ -679,7 +521,6 @@ namespace Pilot37_RCCar
         private async void ReversePress()
         {
             Debug.WriteLine("Reverse Press\n");
-            // Steering Control
             await _PWMCharacteristic.WriteValueAsync((new byte[] { NEUTRAL_1, NEUTRAL_2, REVERSE_SPEED_1, REVERSE_SPEED_2 }).AsBuffer());
         }
 
@@ -696,10 +537,10 @@ namespace Pilot37_RCCar
 
             if (_previousButton != null && _previousButton != PauseButton)
             {
-                ChangePathFill(_previousButton, _navDefault);
+                _previousButton.Background = _navDefault;
             }
 
-            StopPath.Fill = _gazedUponStop;
+            StopButton.Background = _gazedUponStop;
 
             if (_paused)
             {
