@@ -33,12 +33,22 @@ namespace Pilot37_RCCar
     /// An eye-gaze enabled application to drive an RC car and display an FPV stream from cameras on the car.
     /// .
     /// </summary>
+
+    public static class Globals
+    {
+        public static GazePointer _gaze;
+        public static bool _firstTimeHere = true;
+    }
+
     public sealed partial class MainPage : Page
     {
         private System.Threading.Timer _alive, _control;
         private static int _alivePeriod = 500, _controlPeriod = 3000;
 
-        private GazePointer _gaze;
+        //static class Globals
+        //{
+        //    public static GazePointer _gaze;
+        //}
 
         private BluetoothLEAdvertisementWatcher bleWatch1;
         private MediaCapture _mediacCapture1;
@@ -117,13 +127,16 @@ namespace Pilot37_RCCar
         private void MainPage_OnLoaded(object sender, RoutedEventArgs e)
         {
             // Set up the a GazePointer object and make it visible on screen
-            _gaze = new GazePointer(this);
-            _gaze.CursorRadius = 6;
-            _gaze.IsCursorVisible = true;
-            _gaze.Filter = new OneEuroFilter();
+            if (Globals._firstTimeHere)
+            {
+                Globals._gaze = new GazePointer(this);
+                Globals._gaze.CursorRadius = 6;
+                Globals._gaze.IsCursorVisible = true;
+                Globals._gaze.Filter = new OneEuroFilter();
 
-            _gaze.GazePointerEvent += OnGazePointerEvent;
-            _gaze.EyesOffDelay = 250000;
+                Globals._gaze.GazePointerEvent += OnGazePointerEvent;
+                Globals._gaze.EyesOffDelay = 250000;
+            }
         }
 
         private void Application_Suspending(object sender, object o)
@@ -210,9 +223,14 @@ namespace Pilot37_RCCar
                         Button_Handler(_button);
                         break;
                     case GazePointerState.Dwell:
-                        if (_button.Equals(PauseButton))
+                        switch(_button.Name)
                         {
-                            PausePress();
+                            case "PauseButton":
+                                PausePress();
+                                break;
+                            case "SettingsButton":
+                                SettingsPress();
+                                break;
                         }
                         break;
                 }
@@ -229,7 +247,7 @@ namespace Pilot37_RCCar
 
             if (_previousButton != null && _previousButton != b)
             {
-                if (_previousButton == PauseButton)
+                if (_previousButton == PauseButton || _previousButton == SettingsButton)
                 {
                     _previousButton.Background = _sideDefault;
                 } else
@@ -279,6 +297,12 @@ namespace Pilot37_RCCar
 
         protected async override void OnNavigatedTo(NavigationEventArgs e)
         {
+            Debug.WriteLine(Globals._firstTimeHere);
+            if (!Globals._firstTimeHere)
+            {
+                Globals._gaze.GazePointerEvent += OnGazePointerEvent;
+            }
+
             await InitializeCameraAsync();
 
             // Create a watcher to find a BLE Device with name "Pilot 37"
@@ -298,7 +322,9 @@ namespace Pilot37_RCCar
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
+            Globals._gaze.GazePointerEvent -= OnGazePointerEvent;
             bleWatch1.Stop();
+            //_controlsEnabled = false;
             base.OnNavigatedFrom(e);
         }
 
@@ -436,7 +462,10 @@ namespace Pilot37_RCCar
 
         private void Stop()
         {
-            _previousButton.Background = _navDefault;
+            if (_previousButton != PauseButton)
+            {
+                _previousButton.Background = _navDefault;
+            }
             _previousButton = StopButton;
             StopButton.Background = _gazedUponStop;
             StateChange(ControlStates.Stop, StopPress);
@@ -449,13 +478,18 @@ namespace Pilot37_RCCar
             {
                 Button _button = (Button)sender;
 
-                if (_button == PauseButton)
+                switch (_button.Name)
                 {
-                    PausePress();
-                    return;
+                    case "PauseButton":
+                        PausePress();
+                        return;
+                    case "SettingsButton":
+                        SettingsPress();
+                        return;
+                    default:
+                        Button_Handler(_button);
+                        break;
                 }
-
-                Button_Handler(_button);
             }
         }
 
@@ -526,9 +560,10 @@ namespace Pilot37_RCCar
 
         private async void PausePress()
         {
+            Debug.WriteLine("Pause Press\n");
             if (_controlsEnabled)
             {
-                // Steering Control
+                // Send STOP controls
                 await _PWMCharacteristic.WriteValueAsync((new byte[] { NEUTRAL_1, NEUTRAL_2, NEUTRAL_1, NEUTRAL_2 }).AsBuffer());
                 //_control = new System.Threading.Timer(state => { SendBLEControl(someStopArg); }, null, 0, _controlPeriod);
             }
@@ -552,6 +587,21 @@ namespace Pilot37_RCCar
                 _previousButton = StopButton;
                 StateChange(ControlStates.Stop, StopPress);
             }
+        }
+
+        private void SettingsPress()
+        {
+            Debug.WriteLine("Settings Press\n");
+            Globals._firstTimeHere = false;
+            if (_previousButton != null && _previousButton != PauseButton)
+            {
+                _previousButton.Background = _navDefault;
+            }
+
+            Stop();
+
+            Frame.Navigate(typeof(SettingsPage));
+
         }
         #endregion
     }

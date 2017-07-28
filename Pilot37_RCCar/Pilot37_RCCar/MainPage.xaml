@@ -43,6 +43,8 @@
                 <ColumnDefinition />
             </Grid.ColumnDefinitions>
 
+            <Button x:Name="SettingsButton" Content="&#xe115;" Opacity="0.2" Grid.Row="11" Grid.Column="11" Background="Blue" Foreground="White" FontFamily="Segoe UI Symbol" FontSize="50" Grid.RowSpan="3"  Click="Button_Click" Margin="53.333,0,-56,57" VerticalAlignment="Bottom" Height="80" Width="110" />
+
             <Button x:Name="PauseButton" Opacity="0.2" Grid.Row="12" Grid.Column="0" Content="Pause" Background="Blue" Foreground="White" FontFamily="Segoe UI Symbol" FontSize="28" Grid.RowSpan="2"  Click="Button_Click" Margin="-60,0,0,57" VerticalAlignment="Bottom" Height="80" Width="110" />
 
             <Grid x:Name="ControlButtons" Grid.ColumnSpan="12" Grid.RowSpan="14" Width="1400" Height="965" Margin="-80,-15,-80,10" VerticalAlignment="Bottom" RenderTransformOrigin="0.5,0.5">
@@ -50,29 +52,37 @@
                     <CompositeTransform Rotation="-0"/>
                 </Grid.RenderTransform>
 
-                <Button x:Name="SlowForwardButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="110" Width="300" Margin="556,231,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Background="AliceBlue"/>
+                <Button x:Name="SlowForwardButton" Content="&#x2191;" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="110" Width="300" Margin="556,231,0,0" FontFamily="Segoe UI Symbol" FontSize="80" Click="Button_Click" Background="AliceBlue" FontWeight="Bold"/>
 
-                <Button x:Name="FastForwardButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="110" Width="400" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="506,100,0,0" Background="AliceBlue"/>
+                <Button x:Name="FastForwardButton" Content="&#8657;" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="110" Width="400" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="506,100,0,0" Background="AliceBlue" VerticalContentAlignment="Top" FontWeight="ExtraBold"/>
 
-                <Button x:Name="StopButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="110" Width="300" Margin="556,716,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Background="Red"/>
+                <Button x:Name="StopButton" Content="&#xE15B;" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="110" Width="300" Margin="556,716,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Background="Red"/>
 
-                <Button x:Name="ReverseButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="110" Width="400" Margin="506,847,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Background="AliceBlue"/>
+                <Button x:Name="ReverseButton" Content="&#x2193;" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="110" Width="400" Margin="506,847,0,0" FontFamily="Segoe UI Symbol" FontSize="80" Click="Button_Click" Background="AliceBlue" FontWeight="Bold"/>
 
-                <Button x:Name="SoftRightButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="125" Width="125" Margin="1017.334,159,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Background="AliceBlue" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
+                <Button x:Name="SoftRightButton" Content="&#x2191;" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="125" Width="125" Margin="1017.334,470,0,0" FontFamily="Segoe UI Symbol" FontSize="80" Click="Button_Click" Background="AliceBlue" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto" FontWeight="Bold">
                     <Button.RenderTransform>
                         <CompositeTransform Rotation="45"/>
                     </Button.RenderTransform>
                 </Button>
 
-                <Button x:Name="SoftLeftButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="125" Width="125" Margin="269.999,158.001,0,0" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Background="AliceBlue" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto">
+                <Button x:Name="SoftLeftButton" Content="&#x2191;" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="125" Width="125" Margin="269.999,470,0,0" FontFamily="Segoe UI Symbol" FontSize="80" Click="Button_Click" Background="AliceBlue" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False" d:LayoutRounding="Auto" FontWeight="Bold">
                     <Button.RenderTransform>
                         <CompositeTransform Rotation="-45"/>
                     </Button.RenderTransform>
                 </Button>
 
-                <Button x:Name="SharpRightButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="125" Width="125" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="1234,158,0,0" Background="AliceBlue"/>
+                <Button x:Name="SharpRightButton" Content="&#x21bb;" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="125" Width="125" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="1234,470,0,0" Background="AliceBlue" RenderTransformOrigin="0.5,0.5" FontWeight="Bold" VerticalContentAlignment="Top">
+                    <Button.RenderTransform>
+                        <CompositeTransform Rotation="180"/>
+                    </Button.RenderTransform>
+                </Button>
 
-                <Button x:Name="SharpLeftButton" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="125" Width="125" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="55,158,0,0" Background="AliceBlue"/>
+                <Button x:Name="SharpLeftButton" Content="&#x21ba;" Opacity="0.3" HorizontalAlignment="Left" VerticalAlignment="Top" Height="125" Width="125" FontFamily="Segoe UI Symbol" FontSize="72" Click="Button_Click" Margin="55,470,0,0" Background="AliceBlue" RenderTransformOrigin="0.5,0.5" VerticalContentAlignment="Top" FontWeight="Bold">
+                    <Button.RenderTransform>
+                        <CompositeTransform Rotation="180"/>
+                    </Button.RenderTransform>
+                </Button>
 
             </Grid>
         </Grid>
