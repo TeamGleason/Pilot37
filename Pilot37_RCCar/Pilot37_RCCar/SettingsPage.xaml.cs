@@ -40,7 +40,22 @@ namespace Pilot37_RCCar
 
         private void Settings_Button_Click(object sender, RoutedEventArgs e)
         {
-            this.Frame.Navigate(typeof(MainPage));
+            var _button = sender as Button;
+            if (_button != null)
+            {
+                switch (_button.Name)
+                {
+                    case "ExitButton":
+                        ExitPress();
+                        break;
+                    case "CloseButton":
+                        ClosePress();
+                        break;
+                    case "SaveButton":
+                        ClosePress();
+                        break;
+                }
+            }
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -59,19 +74,16 @@ namespace Pilot37_RCCar
         {
             // Figure out what part of the GUI is currently being gazed upon
             UIElement _temp = ea.HitTarget;
-            Debug.WriteLine($"This is the HIT TARGET on the Settings Page: {_temp}");
 
             // Eyes Off event
             if (_temp == null)
             {
-                Debug.WriteLine("Eyes Off Event!");
+                Debug.WriteLine("Settings: Eyes Off Event!");
             }
             // Button Selection event
-            else if (_temp.ToString().Contains("Button"))
+            var _button = _temp as Button;
+            if (_button != null)
             {
-                Button _button = (Button)ea.HitTarget;
-                Debug.WriteLine($"Settings Page button hit: {_button.Name}");
-
                 switch (ea.State)
                 {
                     case GazePointerState.Fixation:
@@ -79,7 +91,13 @@ namespace Pilot37_RCCar
                     case GazePointerState.Dwell:
                         switch (_button.Name)
                         {
+                            case "ExitButton":
+                                ExitPress();
+                                break;
                             case "CloseButton":
+                                ClosePress();
+                                break;
+                            case "SaveButton":
                                 ClosePress();
                                 break;
                         }
@@ -91,6 +109,12 @@ namespace Pilot37_RCCar
         private void ClosePress()
         {
             this.Frame.Navigate(typeof(MainPage));
+        }
+
+        private void ExitPress()
+        {
+            // TODO: DisconnectBLE() from this Page
+            Application.Current.Exit();
         }
     }
 }
