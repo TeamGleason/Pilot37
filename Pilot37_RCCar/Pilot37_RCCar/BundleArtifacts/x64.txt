@@ -1,1 +1,1 @@
-MainPackage=C:\Users\t-cosing\Desktop\Pilot37_RCCar\Pilot37_RCCar\bin\x64\Debug\Pilot37_RCCar_1.0.1.0_x64_Debug.appx
+MainPackage=C:\Users\t-cosing\Desktop\Pilot37_RCCar\Pilot37_RCCar\bin\x64\Debug\Pilot37_RCCar_1.0.0.0_x64_Debug.appx

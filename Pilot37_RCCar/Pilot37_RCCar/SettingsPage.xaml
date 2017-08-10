@@ -9,32 +9,97 @@
 
     <Grid Background="Black">
         <Grid x:Name="Buttons">
+            <Grid.Resources>
+                <Storyboard x:Name="FadeStoryboard">
+                    <DoubleAnimation Storyboard.TargetName="SaveStatus" Storyboard.TargetProperty="Opacity" From="1.0" To="0.0" Duration="0:0:3"/>
+                </Storyboard>
+            </Grid.Resources>
+            
             <Grid.RowDefinitions>
-                <RowDefinition Height="69*" />
-                <RowDefinition Height="69*" />
-                <RowDefinition Height="69*" />
-                <RowDefinition Height="69*" />
-                <RowDefinition Height="69*" />
-                <RowDefinition Height="69*" />
-                <RowDefinition Height="69*" />
+                <RowDefinition Height="25" />
+                <RowDefinition Height="150*" />
+                <RowDefinition Height="150*" />
+                <RowDefinition Height="150*" />
+                <RowDefinition Height="150*" />
+                <RowDefinition Height="150*" />
+                <RowDefinition Height="25" />
+                <RowDefinition Height="150*" />
             </Grid.RowDefinitions>
 
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="50"/>
+                <ColumnDefinition Width="150"/>
                 <ColumnDefinition />
                 <ColumnDefinition />
-                <ColumnDefinition />
-                <ColumnDefinition />
-                <ColumnDefinition />
-                <ColumnDefinition />
-                <ColumnDefinition />
-                <ColumnDefinition />
+                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="50"/>
+                <ColumnDefinition Width="180"/>
+                <ColumnDefinition Width="180"/>
+                <ColumnDefinition Width="180"/>
+                <ColumnDefinition Width="50"/>
             </Grid.ColumnDefinitions>
 
-            <Button x:Name="ExitButton" Grid.Row="6" Grid.Column="1" Content="Exit" Background="Gray" Foreground="Black" FontFamily="Segoe UI Symbol" FontSize="28"  Click="Settings_Button_Click" Margin="0" VerticalAlignment="Center" Height="100" Width="150" Grid.ColumnSpan="2" HorizontalAlignment="Center" />
+            <Button x:Name="Button_10" Content="10%" Click="Settings_Button_Click" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="1" Grid.Column="7" Margin="20" Background="CadetBlue" FontSize="47" FontFamily="Segoe UI Black" FontWeight="Bold" FontStyle="Italic"/>
 
-            <Button x:Name="SaveButton" Grid.Row="6" Grid.Column="3" Content="Save" Background="Gray" Foreground="Black" FontFamily="Segoe UI Symbol" FontSize="28"  Click="Settings_Button_Click" Margin="0" VerticalAlignment="Center" Height="100" Width="150" Grid.ColumnSpan="2" HorizontalAlignment="Center" />
+            <Button x:Name="Button_20" Content="20%" Click="Settings_Button_Click" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="1" Grid.Column="8" Margin="20" Background="CadetBlue" FontSize="47" FontFamily="Segoe UI Black" FontWeight="Bold" FontStyle="Italic"/>
 
-            <Button x:Name="CloseButton" Grid.Row="6" Grid.Column="5" Content="Close" Background="Gray" Foreground="Black" FontFamily="Segoe UI Symbol" FontSize="28"  Click="Settings_Button_Click" Margin="0" VerticalAlignment="Center" Height="100" Width="150" Grid.ColumnSpan="2" HorizontalAlignment="Center" />
+            <Button x:Name="Button_30" Content="30%" Click="Settings_Button_Click" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="2" Grid.Column="7" Margin="20" Background="CadetBlue" FontSize="47" FontFamily="Segoe UI Black" FontWeight="Bold" FontStyle="Italic"/>
+
+            <Button x:Name="Button_40" Content="40%" Click="Settings_Button_Click" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="2" Grid.Column="8" Margin="20" Background="CadetBlue" FontSize="47" FontFamily="Segoe UI Black" FontWeight="Bold" FontStyle="Italic"/>
+
+            <Button x:Name="Button_50" Content="50%" Click="Settings_Button_Click" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="3" Grid.Column="7" Margin="20" Background="CadetBlue" FontSize="47" FontFamily="Segoe UI Black" FontWeight="Bold" FontStyle="Italic"/>
+
+            <Button x:Name="Button_60" Content="60%" Click="Settings_Button_Click" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="3" Grid.Column="8" Margin="20" Background="CadetBlue" FontSize="47" FontFamily="Segoe UI Black" FontWeight="Bold" FontStyle="Italic"/>
+
+            <Button x:Name="Button_70" Content="70%" Click="Settings_Button_Click" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="4" Grid.Column="7" Margin="20" Background="CadetBlue" FontSize="47" FontFamily="Segoe UI Black" FontWeight="Bold" FontStyle="Italic"/>
+
+            <Button x:Name="Button_80" Content="80%" Click="Settings_Button_Click" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="4" Grid.Column="8" Margin="20" Background="CadetBlue" FontSize="47" FontFamily="Segoe UI Black" FontWeight="Bold" FontStyle="Italic"/>
+
+            <Button x:Name="Button_90" Content="90%" Click="Settings_Button_Click" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="5" Grid.Column="7" Margin="20" Background="CadetBlue" FontSize="47" FontFamily="Segoe UI Black" FontWeight="Bold" FontStyle="Italic"/>
+
+            <Button x:Name="Button_100" Content="100%" Click="Settings_Button_Click" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="5" Grid.Column="8" Margin="20" Background="CadetBlue" FontSize="47" FontFamily="Segoe UI Black" FontWeight="Bold" FontStyle="Italic"/>
+
+            <TextBlock x:Name="TextBlock_FastForwardValue" HorizontalAlignment="Left" TextWrapping="Wrap" VerticalAlignment="Center" Grid.Column="4" FontSize="40" Foreground="White" FontWeight="Bold" Grid.Row="1"/>
+
+            <TextBlock x:Name="TextBlock_SlowForwardValue" HorizontalAlignment="Left" TextWrapping="Wrap" VerticalAlignment="Center" Grid.Column="4" FontSize="40" Foreground="White" FontWeight="Bold" Grid.Row="2"/>
+
+            <TextBlock x:Name="TextBlock_ReverseValue" HorizontalAlignment="Left" TextWrapping="Wrap" VerticalAlignment="Center" Grid.Column="4" FontSize="40" Foreground="White" FontWeight="Bold" Grid.Row="3"/>
+
+            <TextBlock x:Name="TextBlock_SharpTurnValue" HorizontalAlignment="Left" TextWrapping="Wrap" VerticalAlignment="Center" Grid.Column="4" FontSize="40" Foreground="White" FontWeight="Bold" Grid.Row="4"/>
+
+            <TextBlock x:Name="TextBlock_SoftTurnValue" HorizontalAlignment="Left" TextWrapping="Wrap" VerticalAlignment="Center" Grid.Column="4" FontSize="40" Foreground="White" FontWeight="Bold" Grid.Row="5"/>
+
+
+            <Button x:Name="Button_SelectFastForward" Content="SELECT" Click="Settings_Button_Click" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Column="1" Margin="20" Background="Honeydew" FontSize="24" Grid.Row="1"/>
+
+            <Button x:Name="Button_SelectSlowForward" Content="SELECT" Click="Settings_Button_Click" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Column="1" Margin="20" Background="Honeydew" FontSize="24" Grid.Row="2"/>
+
+            <Button x:Name="Button_SelectReverse" Content="SELECT" Click="Settings_Button_Click" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Column="1" Margin="20" Background="Honeydew" FontSize="24" Grid.Row="3"/>
+
+            <Button x:Name="Button_SelectSharpTurn" Content="SELECT" Click="Settings_Button_Click" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Column="1" Margin="20" Background="Honeydew" FontSize="24" Grid.Row="4"/>
+
+            <Button x:Name="Button_SelectSoftTurn" Content="SELECT" Click="Settings_Button_Click" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Column="1" Margin="20" Background="Honeydew" FontSize="24" Grid.Row="5"/>
+
+
+            <TextBlock x:Name="TextBlock_FastForward" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Fast-Forward Speed Setting:" VerticalAlignment="Center" Grid.ColumnSpan="3" Grid.Row="1" Grid.Column="2" FontSize="36" Foreground="Gray"/>
+
+            <TextBlock x:Name="TextBlock_SlowForward" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Slow-Forward Speed Setting:" VerticalAlignment="Center" Grid.ColumnSpan="3" Grid.Row="2" Grid.Column="2" FontSize="36" Foreground="Gray"/>
+
+            <TextBlock x:Name="TextBlock_Reverse" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Reverse Speed Setting:" VerticalAlignment="Center" Grid.ColumnSpan="3" Grid.Row="3" Grid.Column="2" FontSize="36" Foreground="Gray"/>
+
+            <TextBlock x:Name="TextBlock_SharpTurn" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Sharp Turn Angle Setting:" VerticalAlignment="Center" Grid.ColumnSpan="3" Grid.Row="4" Grid.Column="2" FontSize="36" Foreground="Gray"/>
+
+            <TextBlock x:Name="TextBlock_SoftTurn" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Soft Turn Angle Setting:" VerticalAlignment="Center" Grid.ColumnSpan="3" Grid.Row="5" Grid.Column="2" FontSize="36" Foreground="Gray"/>
+
+            <Button x:Name="ExitButton" Grid.Row="7" Grid.Column="1" Content="Exit" Background="Gray" Foreground="Black" FontFamily="Segoe UI Symbol" FontSize="28"  Click="Settings_Button_Click" Margin="0" VerticalAlignment="Center" Height="100" Width="150" Grid.ColumnSpan="2" HorizontalAlignment="Center" />
+
+            <Button x:Name="SaveButton" Grid.Row="7" Grid.Column="3" Background="Gray" Foreground="Black" FontFamily="Segoe UI Symbol" FontSize="28"  Click="Settings_Button_Click" Margin="0" VerticalAlignment="Center" Height="100" Width="150" Grid.ColumnSpan="2" HorizontalAlignment="Right">
+                <TextBlock>Set  As<LineBreak/>Default </TextBlock>
+            </Button>
+            
+            <TextBlock x:Name="SaveStatus" HorizontalAlignment="Left" Grid.RowSpan="2" TextWrapping="Wrap" Text="Saved!" VerticalAlignment="Center" Grid.Row="7" Grid.Column="6" FontSize="30" Foreground="White" Opacity="0"/>
+
+            <Button x:Name="CloseButton" Grid.Row="7" Grid.Column="7" Content="Close" Background="Gray" Foreground="Black" FontFamily="Segoe UI Symbol" FontSize="28"  Click="Settings_Button_Click" Margin="0" VerticalAlignment="Center" Height="100" Width="150" Grid.ColumnSpan="2" HorizontalAlignment="Center" />
         </Grid>
     </Grid>
 </Page>

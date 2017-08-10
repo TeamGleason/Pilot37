@@ -46,6 +46,8 @@
             <Button x:Name="SettingsButton" Content="&#xe115;" Opacity="0.2" Grid.Row="11" Grid.Column="11" Background="Blue" Foreground="White" FontFamily="Segoe UI Symbol" FontSize="50" Grid.RowSpan="3"  Click="Button_Click" Margin="53.333,0,-56,57" VerticalAlignment="Bottom" Height="80" Width="110" />
 
             <Button x:Name="PauseButton" Opacity="0.2" Grid.Row="12" Grid.Column="0" Content="Pause" Background="Blue" Foreground="White" FontFamily="Segoe UI Symbol" FontSize="28" Grid.RowSpan="2"  Click="Button_Click" Margin="-60,0,0,57" VerticalAlignment="Bottom" Height="80" Width="110" />
+            
+            <TextBlock x:Name="ConnectionStatus" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Not Connected" VerticalAlignment="Center" Grid.Row="13" Foreground="Red" FontSize="30" Grid.ColumnSpan="3" Margin="-60,10,0,0"/>
 
             <Grid x:Name="ControlButtons" Grid.ColumnSpan="12" Grid.RowSpan="14" Width="1400" Height="965" Margin="-80,-15,-80,10" VerticalAlignment="Bottom" RenderTransformOrigin="0.5,0.5">
                 <Grid.RenderTransform>

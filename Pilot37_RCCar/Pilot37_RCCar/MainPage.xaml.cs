@@ -13,6 +13,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Core;
+using Windows.ApplicationModel.Core;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
@@ -38,11 +39,47 @@ namespace Pilot37_RCCar
     {
         public static GazePointer _gaze;
         public static bool _firstTimeHere = true;
-        
+
+        public static BluetoothLEAdvertisement _bleAdv1 = null;
+        public static BluetoothLEAdvertisementFilter _bleAdvFilter1 = null;
+        public static BluetoothLEAdvertisementWatcher bleWatch1;
+        public static BluetoothLEDevice _nordic = null;
+
+        public static Guid _heartBeatGUID = new Guid("8e9f3739-d80c-0991-c44a-3dab1a06896c");
         public static GattCharacteristic _heartBeatCharacteristic = null;
+        public static Guid _GPIOGUID = new Guid("8e9f373a-d80c-0991-c44a-3dab1a06896c");
         public static GattCharacteristic _GPIOCharacteristic = null;
+        public static Guid _PWMGUID = new Guid("8e9f373b-d80c-0991-c44a-3dab1a06896c");
         public static GattCharacteristic _PWMCharacteristic = null;
+        public static Guid _primaryServiceUUID = new Guid("8e9f3737-d80c-0991-c44a-3dab1a06896c");
         public static GattDeviceService _primaryService = null;
+
+        public static String _fastForwardSetting = "30%";
+        public static String _slowForwardSetting = "30%";
+        public static String _reverseSetting = "30%";
+        public static String _sharpTurnSetting = "80%";
+        public static String _softTurnSetting = "30%";
+
+        public static ApplicationDataContainer _localSettings = ApplicationData.Current.LocalSettings;
+
+        public static byte SOFT_LEFT_1 = 0x27;
+        public static byte SOFT_LEFT_2 = 0x06;
+        public static byte SHARP_LEFT_1 = 0x6c;
+        public static byte SHARP_LEFT_2 = 0x07;
+        public static byte SOFT_RIGHT_1 = 0x91;
+        public static byte SOFT_RIGHT_2 = 0x05;
+        public static byte SHARP_RIGHT_1 = 0x4c;
+        public static byte SHARP_RIGHT_2 = 0x04;
+        public static byte NEUTRAL_1 = 0xdc;
+        public static byte NEUTRAL_2 = 0x05;
+        public static byte SLOW_SPEED_1 = 0x27;
+        public static byte SLOW_SPEED_2 = 0x06;
+        public static byte FAST_SPEED_1 = 0x72;
+        public static byte FAST_SPEED_2 = 0x06;
+        public static byte REVERSE_SPEED_1 = 0x46;
+        public static byte REVERSE_SPEED_2 = 0x05;
+        public static byte RECENT_SPEED_1 = SLOW_SPEED_1;
+        public static byte RECENT_SPEED_2 = SLOW_SPEED_2;
     }
 
     public sealed partial class MainPage : Page
@@ -50,20 +87,20 @@ namespace Pilot37_RCCar
         private System.Threading.Timer _alive, _control;
         private static int _alivePeriod = 500, _controlPeriod = 3000;
 
-        private BluetoothLEAdvertisementWatcher bleWatch1;
         private MediaCapture _mediacCapture1;
         private DeviceInformation _fpvDevice1;
         private CaptureElement _frontCam;
 
-        private BluetoothLEDevice _nordic = null;
-        
-        private Guid _heartBeatGUID = new Guid("8e9f3739-d80c-0991-c44a-3dab1a06896c");
+        //private BluetoothLEAdvertisementWatcher bleWatch1;
+        //private BluetoothLEDevice _nordic = null;
+
+        //private Guid _heartBeatGUID = new Guid("8e9f3739-d80c-0991-c44a-3dab1a06896c");
         //private GattCharacteristic _heartBeatCharacteristic = null;
-        private Guid _GPIOGUID = new Guid("8e9f373a-d80c-0991-c44a-3dab1a06896c");
+        //private Guid _GPIOGUID = new Guid("8e9f373a-d80c-0991-c44a-3dab1a06896c");
         //private GattCharacteristic _GPIOCharacteristic = null;
-        private Guid _PWMGUID = new Guid("8e9f373b-d80c-0991-c44a-3dab1a06896c");
+        //private Guid _PWMGUID = new Guid("8e9f373b-d80c-0991-c44a-3dab1a06896c");
         //private GattCharacteristic _PWMCharacteristic = null;
-        private Guid _primaryServiceUUID = new Guid("8e9f3737-d80c-0991-c44a-3dab1a06896c");
+        //private Guid _primaryServiceUUID = new Guid("8e9f3737-d80c-0991-c44a-3dab1a06896c");
         //private GattDeviceService _primaryService = null;
 
         SolidColorBrush _navDefault = new SolidColorBrush(Colors.AliceBlue);
@@ -76,29 +113,8 @@ namespace Pilot37_RCCar
         private bool _ToggleState = true;
         private bool _paused = false;
         private bool _controlsEnabled = false;
+        private bool _connecting = false;
         private int _ticks;
-
-        private const byte SOFT_LEFT_1 = 0x2c;
-        private const byte SOFT_LEFT_2 = 0x06;
-        private const byte SHARP_LEFT_1 = 0xd0;
-        private const byte SHARP_LEFT_2 = 0x07;
-        private const byte SOFT_RIGHT_1 = 0x89;
-        private const byte SOFT_RIGHT_2 = 0x05;
-        private const byte SHARP_RIGHT_1 = 0xe8;
-        private const byte SHARP_RIGHT_2 = 0x03;
-        private const byte NEUTRAL_1 = 0xdc;
-        private const byte NEUTRAL_2 = 0x05;
-        private const byte SLOWEST_SPEED_1 = 0x20;
-        private const byte SLOWEST_SPEED_2 = 0x06;
-        private const byte SLOW_SPEED_1 = 0x30;
-        private const byte SLOW_SPEED_2 = 0x06;
-        private const byte MEDIUM_SPEED_1 = 0x40;
-        private const byte MEDIUM_SPEED_2 = 0x06;
-        private const byte FAST_SPEED_1 = 0x72;
-        private const byte FAST_SPEED_2 = 0x06;
-        private const byte REVERSE_SPEED_1 = 0x5f;
-        private const byte REVERSE_SPEED_2 = 0x05;
-
 
         private enum ControlStates
         {
@@ -136,6 +152,115 @@ namespace Pilot37_RCCar
 
                 Globals._gaze.GazePointerEvent += OnGazePointerEvent;
                 Globals._gaze.EyesOffDelay = 250000;
+
+                PullSettingsFromStorage();
+            }
+
+        }
+
+        private void PullSettingsFromStorage()
+        {
+            // Settings - Percentages
+            String _ffs = Globals._localSettings.Values["fastForwardSetting"] as String;
+            String _sfs = Globals._localSettings.Values["slowForwardSetting"] as String;
+            String _rs = Globals._localSettings.Values["reverseSetting"] as String;
+            String _shts = Globals._localSettings.Values["sharpTurnSetting"] as String;
+            String _sots = Globals._localSettings.Values["softTurnSetting"] as String;
+            if (_ffs != null)
+            {
+                Globals._fastForwardSetting = _ffs;
+            }
+            if (_sfs != null)
+            {
+                Globals._slowForwardSetting = _sfs;
+            }
+            if (_rs != null)
+            {
+                Globals._reverseSetting = _rs;
+            }
+            if (_shts != null)
+            {
+                Globals._sharpTurnSetting = _shts;
+            }
+            if (_sots != null)
+            {
+                Globals._softTurnSetting = _sots;
+            }
+
+            // Settings - Actual Byte Values
+            String _ffv1 = Globals._localSettings.Values["fastForwardValue1"] as String;
+            String _ffv2 = Globals._localSettings.Values["fastForwardValue2"] as String;
+            String _sfv1 = Globals._localSettings.Values["slowForwardValue1"] as String;
+            String _sfv2 = Globals._localSettings.Values["slowForwardValue2"] as String;
+            String _rv1 = Globals._localSettings.Values["reverseValue1"] as String;
+            String _rv2 = Globals._localSettings.Values["reverseValue2"] as String;
+
+            String _shrv1 = Globals._localSettings.Values["sharpRightValue1"] as String;
+            String _shrv2 = Globals._localSettings.Values["sharpRightValue2"] as String;
+            String _shlv1 = Globals._localSettings.Values["sharpLeftValue1"] as String;
+            String _shlv2 = Globals._localSettings.Values["sharpLeftValue2"] as String;
+            String _sorv1 = Globals._localSettings.Values["softRightValue1"] as String;
+            String _sorv2 = Globals._localSettings.Values["softRightValue2"] as String;
+            String _solv1 = Globals._localSettings.Values["softLeftValue1"] as String;
+            String _solv2 = Globals._localSettings.Values["softLeftValue2"] as String;
+
+
+            if (_ffv1 != null)
+            {
+                Globals.FAST_SPEED_1 = Convert.ToByte(_ffv1);
+            }
+            if (_ffv2 != null)
+            {
+                Globals.FAST_SPEED_2 = Convert.ToByte(_ffv2);
+            }
+            if (_sfv1 != null)
+            {
+                Globals.SLOW_SPEED_1 = Convert.ToByte(_sfv1);
+            }
+            if (_sfv2 != null)
+            {
+                Globals.SLOW_SPEED_2 = Convert.ToByte(_sfv2);
+            }
+            if (_rv1 != null)
+            {
+                Globals.REVERSE_SPEED_1 = Convert.ToByte(_rv1);
+            }
+            if (_rv2 != null)
+            {
+                Globals.REVERSE_SPEED_2 = Convert.ToByte(_rv2);
+            }
+
+            if (_shrv1 != null)
+            {
+                Globals.SHARP_RIGHT_1 = Convert.ToByte(_shrv1);
+            }
+            if (_shrv2 != null)
+            {
+                Globals.SHARP_RIGHT_2 = Convert.ToByte(_shrv2);
+            }
+            if (_shlv1 != null)
+            {
+                Globals.SHARP_LEFT_1 = Convert.ToByte(_shlv1);
+            }
+            if (_shlv2 != null)
+            {
+                Globals.SHARP_LEFT_2 = Convert.ToByte(_shlv2);
+            }
+            if (_sorv1 != null)
+            {
+                Globals.SOFT_RIGHT_1 = Convert.ToByte(_sorv1);
+            }
+            if (_sorv2 != null)
+            {
+                Globals.SOFT_RIGHT_2 = Convert.ToByte(_sorv2);
+            }
+            if (_solv1 != null)
+            {
+                Globals.SOFT_LEFT_1 = Convert.ToByte(_solv1);
+            }
+            if (_solv2 != null)
+            {
+                Globals.SOFT_LEFT_2 = Convert.ToByte(_solv2);
             }
         }
 
@@ -143,30 +268,33 @@ namespace Pilot37_RCCar
         {
             Debug.WriteLine("Suspending");
             DisconnectFromBLE();
+            DisconnectFromBLE();
         }
 
         private void Application_CatchUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            // TODO: Make this exception handling work!
+            // TODO: Handle things correctly! RELEASE VERSION SHOULD ALWAYS CATCH! TEST
             Debug.WriteLine("Unhandled Exception Caught!");
             e.Handled = true;
             PauseButton.Background = _gazedUponStop;
             DisconnectFromBLE();
         }
 
-        // TODO: Remove the DeviceWatcher object
         private void DisconnectFromBLE()
         {
             // Place the RC Car into a safe STOP state
-            if (_nordic != null && Globals._PWMCharacteristic != null)
+            if (Globals._nordic != null && Globals._PWMCharacteristic != null)
             {
                 Stop();
             }
 
-            if (bleWatch1 != null)
+            Globals._bleAdv1 = null;
+            Globals._bleAdvFilter1 = null;
+
+            if (Globals.bleWatch1 != null)
             {
-                bleWatch1.Stop();
-                bleWatch1 = null;
+                Globals.bleWatch1.Stop();
+                Globals.bleWatch1 = null;
             }
 
             // Dispose all BLE related variables
@@ -194,12 +322,12 @@ namespace Pilot37_RCCar
             }
             Globals._primaryService = null;
 
-            if (_nordic != null)
+            if (Globals._nordic != null)
             {
-                _nordic.Dispose();
+                Globals._nordic.Dispose();
             }
-            _nordic = null;
-    }
+            Globals._nordic = null;
+        }
 
         #region Gaze Event
         private void OnGazePointerEvent(GazePointer sender, GazePointerEventArgs ea)
@@ -225,14 +353,14 @@ namespace Pilot37_RCCar
                 switch (ea.State)
                 {
                     case GazePointerState.Fixation:
-                        if (_button.Equals(PauseButton))
+                        if (_button.Equals(PauseButton) || _button.Equals(SettingsButton))
                         {
                             return;
                         }
                         Button_Handler(_button);
                         break;
                     case GazePointerState.Dwell:
-                        switch(_button.Name)
+                        switch (_button.Name)
                         {
                             case "PauseButton":
                                 PausePress();
@@ -259,13 +387,15 @@ namespace Pilot37_RCCar
                 if (_previousButton == PauseButton || _previousButton == SettingsButton)
                 {
                     _previousButton.Background = _sideDefault;
-                } else
+                }
+                else
                 {
                     _previousButton.Background = _navDefault;
                 }
             }
 
             b.Background = _gazedUpon;
+            // TODO: Should this statement be at the very end of this current method?
             _previousButton = b;
 
             switch (b.Name)
@@ -309,21 +439,27 @@ namespace Pilot37_RCCar
             if (!Globals._firstTimeHere)
             {
                 Globals._gaze.GazePointerEvent += OnGazePointerEvent;
-                // TODO: Sketchy here...Bluetooth could have disconnected in Settings!
                 _controlsEnabled = true;
-            } else
+            }
+            else
             {
                 // Create a watcher to find a BLE Device with name "Pilot 37"
-                //TODO: Make a filter with the Manufacturer Data/Device ID, not a LocalName string
-                BluetoothLEAdvertisement _bleAdv1 = new BluetoothLEAdvertisement();
-                _bleAdv1.LocalName = "Pilot 37";
-                BluetoothLEAdvertisementFilter _bleAdvFilter1 = new BluetoothLEAdvertisementFilter();
-                _bleAdvFilter1.Advertisement = _bleAdv1;
-                bleWatch1 = new BluetoothLEAdvertisementWatcher(_bleAdvFilter1);
+                Globals._bleAdv1 = new BluetoothLEAdvertisement();
+                Globals._bleAdv1.LocalName = "Pilot 37";
+                Globals._bleAdvFilter1 = new BluetoothLEAdvertisementFilter();
+                Globals._bleAdvFilter1.Advertisement = Globals._bleAdv1;
+                Globals.bleWatch1 = new BluetoothLEAdvertisementWatcher(Globals._bleAdvFilter1);
 
-                bleWatch1.Received += BLEWatcher_Received;
-                bleWatch1.Stopped += BLEWatcher_Stopped;
-                bleWatch1.Start();
+                //TODO: Make a filter with the Manufacturer Data/Device ID, not a LocalName string
+                //Globals.bleWatch1 = new BluetoothLEAdvertisementWatcher();
+                //Globals.bleWatch1.AdvertisementFilter.Advertisement.ServiceUuids.Add(Globals._primaryServiceUUID);
+                //var manufacturerData = new BluetoothLEManufacturerData();
+                //manufacturerData.CompanyId = 0x0059;
+                //Globals.bleWatch1.AdvertisementFilter.Advertisement.ManufacturerData.Add(manufacturerData);
+
+                Globals.bleWatch1.Received += BLEWatcher_Received;
+                Globals.bleWatch1.Stopped += BLEWatcher_Stopped;
+                Globals.bleWatch1.Start();
             }
             await InitializeCameraAsync();
 
@@ -333,23 +469,21 @@ namespace Pilot37_RCCar
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             Globals._gaze.GazePointerEvent -= OnGazePointerEvent;
-            //bleWatch1.Stop();
             _controlsEnabled = false;
             base.OnNavigatedFrom(e);
         }
 
         private async void BLEWatcher_Received(BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementReceivedEventArgs args)
         {
-            _nordic = await BluetoothLEDevice.FromBluetoothAddressAsync(args.BluetoothAddress);
-
-            if (_nordic == null)
+            Globals._nordic = await BluetoothLEDevice.FromBluetoothAddressAsync(args.BluetoothAddress);
+            if (Globals._nordic == null)
             {
                 Debug.WriteLine("Error: BLE Device can't connect!");
                 return;
             }
 
-            _nordic.ConnectionStatusChanged += NordicDevice_ConnectionChange;
-            var _nordicServices = await _nordic.GetGattServicesAsync();
+            Globals._nordic.ConnectionStatusChanged += NordicDevice_ConnectionChange;
+            var _nordicServices = await Globals._nordic.GetGattServicesAsync();
             var services = _nordicServices.Services;
 
             if (services == null)
@@ -360,7 +494,7 @@ namespace Pilot37_RCCar
 
             foreach (GattDeviceService service in services)
             {
-                if (service.Uuid.Equals(_primaryServiceUUID))
+                if (service.Uuid.Equals(Globals._primaryServiceUUID))
                 {
                     Globals._primaryService = service;
                 }
@@ -375,26 +509,50 @@ namespace Pilot37_RCCar
 
             // Now that we are connected, begin our Heartbeat communication
             Debug.WriteLine("BLE Connection Status: CONNECTED");
+            
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { Connecting(); });
+
             // Brief Delay
             _ticks = Environment.TickCount;
-            while (Environment.TickCount - _ticks < 2000);
+            while (Environment.TickCount - _ticks < 2000) ;
+
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { Connected(); });
+
             _controlsEnabled = true;
-            _alive = new System.Threading.Timer(state => { keepAlive(); }, null, 0, _alivePeriod);
+            //_alive = new System.Threading.Timer(state => { keepAlive(); }, null, 0, _alivePeriod);
+        }
+
+        private void Connecting()
+        {
+            ConnectionStatus.Foreground = new SolidColorBrush(Colors.Yellow);
+            ConnectionStatus.Text = "Connecting";
+        }
+
+        private void Connected()
+        {
+            ConnectionStatus.Foreground = new SolidColorBrush(Colors.Green);
+            ConnectionStatus.Text = "Connected";
+        }
+
+        private void NotConnected()
+        {
+            ConnectionStatus.Foreground = new SolidColorBrush(Colors.Red);
+            ConnectionStatus.Text = "Not Connected";
         }
 
         private void SetEachCharacteristic(GattCharacteristic c)
         {
-            if (c.Uuid.Equals(_heartBeatGUID))
+            if (c.Uuid.Equals(Globals._heartBeatGUID))
             {
                 Globals._heartBeatCharacteristic = c;
             }
 
-            if (c.Uuid.Equals(_GPIOGUID))
+            if (c.Uuid.Equals(Globals._GPIOGUID))
             {
                 Globals._GPIOCharacteristic = c;
             }
 
-            if (c.Uuid.Equals(_PWMGUID))
+            if (c.Uuid.Equals(Globals._PWMGUID))
             {
                 Globals._PWMCharacteristic = c;
             }
@@ -425,6 +583,9 @@ namespace Pilot37_RCCar
             if (_controlsEnabled)
             {
                 Debug.WriteLine("BLE Connection Status: DISCONNECTED");
+
+                CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { NotConnected(); });
+
                 _controlsEnabled = false;
                 Helper();
             }
@@ -514,65 +675,79 @@ namespace Pilot37_RCCar
         private async void SlowForwardPress()
         {
             Debug.WriteLine("Slow Forward Press\n");
-            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { NEUTRAL_1, NEUTRAL_2, SLOW_SPEED_1, SLOW_SPEED_2 }).AsBuffer());
+            Globals.RECENT_SPEED_1 = Globals.SLOW_SPEED_1;
+            Globals.RECENT_SPEED_2 = Globals.SLOW_SPEED_2;
+            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { Globals.NEUTRAL_1, Globals.NEUTRAL_2, Globals.SLOW_SPEED_1, Globals.SLOW_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardArg); }, null, 0, _controlPeriod);
         }
 
         private async void FastForwardPress()
         {
             Debug.WriteLine("Fast Forward Press\n");
-            // Steering Control
-            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { NEUTRAL_1, NEUTRAL_2, FAST_SPEED_1, FAST_SPEED_2 }).AsBuffer());
+            //Debug.WriteLine($"Byte 1: {Globals.FAST_SPEED_1:X2}, Byte 2: {Globals.FAST_SPEED_2:X2}");
+            Globals.RECENT_SPEED_1 = Globals.FAST_SPEED_1;
+            Globals.RECENT_SPEED_2 = Globals.FAST_SPEED_2;
+            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { Globals.NEUTRAL_1, Globals.NEUTRAL_2, Globals.FAST_SPEED_1, Globals.FAST_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardArg); }, null, 0, _controlPeriod);
         }
 
         private async void SharpRightPress()
         {
             Debug.WriteLine("Slow Sharp Right Press\n");
-            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_RIGHT_1, SHARP_RIGHT_2, SLOWEST_SPEED_1, SLOWEST_SPEED_2 }).AsBuffer());
+            Globals.RECENT_SPEED_1 = Globals.SLOW_SPEED_1;
+            Globals.RECENT_SPEED_2 = Globals.SLOW_SPEED_2;
+            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { Globals.SHARP_RIGHT_1, Globals.SHARP_RIGHT_2, Globals.SLOW_SPEED_1, Globals.SLOW_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardLeftArg); }, null, 0, _controlPeriod);
         }
         private async void SoftRightPress()
         {
             Debug.WriteLine("Slow Soft Right Press\n");
-            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { SOFT_RIGHT_1, SOFT_RIGHT_2, SLOW_SPEED_1, SLOW_SPEED_2 }).AsBuffer());
+            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { Globals.SOFT_RIGHT_1, Globals.SOFT_RIGHT_2, Globals.RECENT_SPEED_1, Globals.RECENT_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardLeftArg); }, null, 0, _controlPeriod);
         }
 
         private async void SharpLeftPress()
         {
             Debug.WriteLine("Slow Sharp Left Press\n");
-            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { SHARP_LEFT_1, SHARP_LEFT_2, SLOWEST_SPEED_1, SLOWEST_SPEED_2 }).AsBuffer());
+            Globals.RECENT_SPEED_1 = Globals.SLOW_SPEED_1;
+            Globals.RECENT_SPEED_2 = Globals.SLOW_SPEED_2;
+            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { Globals.SHARP_LEFT_1, Globals.SHARP_LEFT_2, Globals.SLOW_SPEED_1, Globals.SLOW_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardRightArg); }, null, 0, _controlPeriod);
         }
 
         private async void SoftLeftPress()
         {
             Debug.WriteLine("Slow Soft Left Press\n");
-            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { SOFT_LEFT_1, SOFT_LEFT_2, SLOW_SPEED_1, SLOW_SPEED_2 }).AsBuffer());
+            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { Globals.SOFT_LEFT_1, Globals.SOFT_LEFT_2, Globals.RECENT_SPEED_1, Globals.RECENT_SPEED_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardRightArg); }, null, 0, _controlPeriod);
         }
 
         private async void StopPress()
         {
             Debug.WriteLine("Stop Press\n");
-            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { NEUTRAL_1, NEUTRAL_2, NEUTRAL_1, NEUTRAL_2 }).AsBuffer());
+            Globals.RECENT_SPEED_1 = Globals.SLOW_SPEED_1;
+            Globals.RECENT_SPEED_2 = Globals.SLOW_SPEED_2;
+            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { Globals.NEUTRAL_1, Globals.NEUTRAL_2, Globals.NEUTRAL_1, Globals.NEUTRAL_2 }).AsBuffer());
             //_control = new System.Threading.Timer(state => { SendBLEControl(someStopArg); }, null, 0, _controlPeriod);
         }
 
         private async void ReversePress()
         {
             Debug.WriteLine("Reverse Press\n");
-            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { NEUTRAL_1, NEUTRAL_2, REVERSE_SPEED_1, REVERSE_SPEED_2 }).AsBuffer());
+            Globals.RECENT_SPEED_1 = Globals.SLOW_SPEED_1;
+            Globals.RECENT_SPEED_2 = Globals.SLOW_SPEED_2;
+            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { Globals.NEUTRAL_1, Globals.NEUTRAL_2, Globals.REVERSE_SPEED_1, Globals.REVERSE_SPEED_2 }).AsBuffer());
         }
 
         private async void PausePress()
         {
             Debug.WriteLine("Pause Press\n");
+            Globals.RECENT_SPEED_1 = Globals.SLOW_SPEED_1;
+            Globals.RECENT_SPEED_2 = Globals.SLOW_SPEED_2;
             if (_controlsEnabled)
             {
                 // Send STOP controls
-                await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { NEUTRAL_1, NEUTRAL_2, NEUTRAL_1, NEUTRAL_2 }).AsBuffer());
+                await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { Globals.NEUTRAL_1, Globals.NEUTRAL_2, Globals.NEUTRAL_1, Globals.NEUTRAL_2 }).AsBuffer());
                 //_control = new System.Threading.Timer(state => { SendBLEControl(someStopArg); }, null, 0, _controlPeriod);
             }
 
@@ -589,7 +764,8 @@ namespace Pilot37_RCCar
             {
                 PauseButton.Background = _gazedUpon;
                 _previousButton = PauseButton;
-            } else
+            }
+            else
             {
                 PauseButton.Background = _sideDefault;
                 _previousButton = StopButton;
