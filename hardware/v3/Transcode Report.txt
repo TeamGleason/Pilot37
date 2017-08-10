@@ -1,0 +1,57 @@
+
+
+   ---- Transcoding 'C:\Users\chriod\Documents\eagle\#pilot37\flight board.GBO' ----   Thu Jul 27 10:18:28 2017
+
+D10   --> D100
+D11   --> D101
+-----------------------------------------------------------------
+
+
+   ---- Transcoding 'C:\Users\chriod\Documents\eagle\#pilot37\flight board.GBS' ----   Thu Jul 27 10:18:28 2017
+
+D10   --> D102
+D11   --> D103
+D12   --> D104
+D13   --> D105
+D14   --> D106
+-----------------------------------------------------------------
+
+
+   ---- Transcoding 'C:\Users\chriod\Documents\eagle\#pilot37\flight board.GTL' ----   Thu Jul 27 10:18:28 2017
+
+D10   --> D107
+D11   --> D108
+D12   --> D109
+D13   --> D110
+D14   --> D111
+-----------------------------------------------------------------
+
+
+   ---- Transcoding 'C:\Users\chriod\Documents\eagle\#pilot37\flight board.GTO' ----   Thu Jul 27 10:18:28 2017
+
+D10   --> D112
+D11   --> D113
+D12   --> D114
+D13   --> D115
+-----------------------------------------------------------------
+
+
+   ---- Transcoding 'C:\Users\chriod\Documents\eagle\#pilot37\flight board.GTP' ----   Thu Jul 27 10:18:28 2017
+
+D10   --> D116
+D11   --> D117
+D12   --> D118
+-----------------------------------------------------------------
+
+
+   ---- Transcoding 'C:\Users\chriod\Documents\eagle\#pilot37\flight board.GTS' ----   Thu Jul 27 10:18:28 2017
+
+D10   --> D119
+D11   --> D120
+D12   --> D121
+D13   --> D122
+D14   --> D123
+D15   --> D124
+D16   --> D125
+D17   --> D126
+-----------------------------------------------------------------

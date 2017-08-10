@@ -31,8 +31,10 @@
 
 #define DEVICE_NAME                     "Pilot 37"                                /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "TeamGleason"                       /**< Manufacturer. Will be passed to Device Information Service. */
-#define APP_ADV_INTERVAL                40                                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 25 ms). */
-#define APP_ADV_TIMEOUT_IN_SECONDS      180                                         /**< The advertising timeout in units of seconds. */
+#define APP_ADV_FAST_INTERVAL           MSEC_TO_UNITS(25, UNIT_0_625_MS)    /**< The advertising interval (in units of 0.625 ms. This value corresponds to 25 ms). */
+#define APP_ADV_FAST_TIMEOUT_IN_SECONDS 180
+#define APP_ADV_SLOW_INTERVAL           338    /**< The advertising interval (in units of 0.625 ms. This value corresponds to 211.25 ms (recommended by apple) */
+#define APP_ADV_SLOW_TIMEOUT_IN_SECONDS BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED
 
 #define BATTERY_LEVEL_MEAS_INTERVAL     APP_TIMER_TICKS(2000)                       /**< Battery level measurement interval (ticks). */
 #define MIN_BATTERY_LEVEL               81                                          /**< Minimum battery level as returned by the simulated measurement function. */
@@ -754,8 +756,8 @@ static void advertising_init(void)
     memset(&advdata, 0, sizeof(advdata));
 
     advdata.name_type               = BLE_ADVDATA_FULL_NAME;
-    advdata.include_appearance      = true;
-    advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
+    advdata.include_appearance      = false;
+    advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
     memset(&scanrsp, 0, sizeof(scanrsp));
 
     scanrsp.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
@@ -763,8 +765,11 @@ static void advertising_init(void)
 
     memset(&options, 0, sizeof(options));
     options.ble_adv_fast_enabled  = true;
-    options.ble_adv_fast_interval = APP_ADV_INTERVAL;
-    options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
+    options.ble_adv_fast_interval = APP_ADV_FAST_INTERVAL;
+    options.ble_adv_fast_timeout  = APP_ADV_FAST_TIMEOUT_IN_SECONDS;
+    options.ble_adv_slow_enabled = true;
+    options.ble_adv_slow_interval = APP_ADV_SLOW_INTERVAL;
+    options.ble_adv_slow_timeout  = APP_ADV_SLOW_TIMEOUT_IN_SECONDS;
 
     err_code = ble_advertising_init(&advdata, &scanrsp, &options, on_adv_evt, NULL);
     APP_ERROR_CHECK(err_code);
