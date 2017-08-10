@@ -1,20 +1,13 @@
 ﻿using System;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Diagnostics;
-using System.Diagnostics.Tracing;
 using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.UI;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Core;
 using Windows.ApplicationModel.Core;
-using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using Windows.Devices.Bluetooth;
@@ -23,22 +16,22 @@ using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Enumeration;
 using Windows.Media.Capture;
 using Windows.Storage;
-using Windows.Storage.Streams;
 using GazeInput;
-
-// The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
 namespace Pilot37_RCCar
 {
     /// <summary>
     /// An eye-gaze enabled application to drive an RC car and display an FPV stream from cameras on the car.
-    /// .
     /// </summary>
 
     public static class Globals
     {
         public static GazePointer _gaze;
+        public static Visibility _donut = Visibility.Collapsed;
+        public static Visibility _wave = Visibility.Collapsed;
         public static bool _firstTimeHere = true;
+        public static bool _personality = false;
+        public static bool _controlsEnabledPrev = false;
 
         public static BluetoothLEAdvertisement _bleAdv1 = null;
         public static BluetoothLEAdvertisementFilter _bleAdvFilter1 = null;
@@ -91,29 +84,15 @@ namespace Pilot37_RCCar
         private DeviceInformation _fpvDevice1;
         private CaptureElement _frontCam;
 
-        //private BluetoothLEAdvertisementWatcher bleWatch1;
-        //private BluetoothLEDevice _nordic = null;
-
-        //private Guid _heartBeatGUID = new Guid("8e9f3739-d80c-0991-c44a-3dab1a06896c");
-        //private GattCharacteristic _heartBeatCharacteristic = null;
-        //private Guid _GPIOGUID = new Guid("8e9f373a-d80c-0991-c44a-3dab1a06896c");
-        //private GattCharacteristic _GPIOCharacteristic = null;
-        //private Guid _PWMGUID = new Guid("8e9f373b-d80c-0991-c44a-3dab1a06896c");
-        //private GattCharacteristic _PWMCharacteristic = null;
-        //private Guid _primaryServiceUUID = new Guid("8e9f3737-d80c-0991-c44a-3dab1a06896c");
-        //private GattDeviceService _primaryService = null;
-
         SolidColorBrush _navDefault = new SolidColorBrush(Colors.AliceBlue);
         SolidColorBrush _sideDefault = new SolidColorBrush(Colors.Blue);
         SolidColorBrush _gazedUpon = new SolidColorBrush(Colors.Lime);
         SolidColorBrush _gazedUponStop = new SolidColorBrush(Colors.Red);
         private static Button _previousButton;
         private ControlStates _previousState;
-
-        private bool _ToggleState = true;
+        
         private bool _paused = false;
         private bool _controlsEnabled = false;
-        private bool _connecting = false;
         private int _ticks;
 
         private enum ControlStates
@@ -125,7 +104,9 @@ namespace Pilot37_RCCar
             SoftLeft,
             SharpLeft,
             SoftRight,
-            SharpRight
+            SharpRight,
+            Donut,
+            Wave
         }
 
         ControlStates _controlState = ControlStates.Stop;
@@ -156,6 +137,21 @@ namespace Pilot37_RCCar
                 PullSettingsFromStorage();
             }
 
+            SetPersonalityVisibility();
+        }
+
+        private void SetPersonalityVisibility()
+        {
+            if (Globals._personality)
+            {
+                WaveButton.Visibility = Visibility.Visible;
+                DonutButton.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                WaveButton.Visibility = Visibility.Collapsed;
+                DonutButton.Visibility = Visibility.Collapsed;
+            }
         }
 
         private void PullSettingsFromStorage()
@@ -332,17 +328,12 @@ namespace Pilot37_RCCar
         #region Gaze Event
         private void OnGazePointerEvent(GazePointer sender, GazePointerEventArgs ea)
         {
-            if (!_controlsEnabled)
-            {
-                return;
-            }
-
             // Figure out what part of the GUI is currently being gazed upon
             UIElement _temp = ea.HitTarget;
             var _button = _temp as Button;
 
             // Eyes Off event
-            if (_temp == null)
+            if (_temp == null && _controlsEnabled)
             {
                 Debug.WriteLine("Eyes Off Event!");
                 Stop();
@@ -377,7 +368,7 @@ namespace Pilot37_RCCar
         // Highlight the button that is currently gazed upon, set _previous, and trigger the appropriate callback
         private void Button_Handler(Button b)
         {
-            if (_paused)
+            if (_paused || !_controlsEnabled)
             {
                 return;
             }
@@ -395,7 +386,6 @@ namespace Pilot37_RCCar
             }
 
             b.Background = _gazedUpon;
-            // TODO: Should this statement be at the very end of this current method?
             _previousButton = b;
 
             switch (b.Name)
@@ -425,6 +415,12 @@ namespace Pilot37_RCCar
                 case "ReverseButton":
                     StateChange(ControlStates.Reverse, ReversePress);
                     break;
+                case "DonutButton":
+                    StateChange(ControlStates.Donut, DonutPress);
+                    break;
+                case "WaveButton":
+                    StateChange(ControlStates.Wave, WavePress);
+                    break;
             }
         }
         #endregion
@@ -439,10 +435,14 @@ namespace Pilot37_RCCar
             if (!Globals._firstTimeHere)
             {
                 Globals._gaze.GazePointerEvent += OnGazePointerEvent;
-                _controlsEnabled = true;
             }
             else
             {
+                // Exception: NOT A REAL EXCEPTION THROWN! Any time after navigating TO/FROM SettingsPage, the BLE connection behavior messes up!
+                //        In the Debug statements, the behavior under the hood seems perfect, but clearly isnt actually working
+                //            - Example: _controlsEnabled is printed as 'True', but no Buttons can be clicked and GUI is still RED
+                //            - Example: "BLE Connection Status: CONNECTED/DISCONNECTED" always prints as expected...but UI doesnt respond
+                //        Without navigating to the SettingsPage, everything works!
                 // Create a watcher to find a BLE Device with name "Pilot 37"
                 Globals._bleAdv1 = new BluetoothLEAdvertisement();
                 Globals._bleAdv1.LocalName = "Pilot 37";
@@ -462,13 +462,18 @@ namespace Pilot37_RCCar
                 Globals.bleWatch1.Start();
             }
             await InitializeCameraAsync();
-
+            _controlsEnabled = Globals._controlsEnabledPrev;
+            if (_controlsEnabled)
+            {
+                Connected();
+            }
             base.OnNavigatedTo(e);
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             Globals._gaze.GazePointerEvent -= OnGazePointerEvent;
+            Globals._controlsEnabledPrev = _controlsEnabled;
             _controlsEnabled = false;
             base.OnNavigatedFrom(e);
         }
@@ -499,6 +504,9 @@ namespace Pilot37_RCCar
                     Globals._primaryService = service;
                 }
                 var _nordicChars = await service.GetCharacteristicsAsync();
+                // Exception: Occured when BLE was still connected to previous session, then began a new session, and power cycled the BLE
+                //            Happens when the BLE device is manually power-cycled too quickly.
+                // System.IO.FileNotFoundException: 'The system cannot find the file specified. (Exception from HRESULT: 0x80070002)'
                 var characteristics = _nordicChars.Characteristics;
 
                 foreach (GattCharacteristic character in characteristics)
@@ -507,17 +515,15 @@ namespace Pilot37_RCCar
                 }
             }
 
-            // Now that we are connected, begin our Heartbeat communication
+            // Indicate that the device is now connected
             Debug.WriteLine("BLE Connection Status: CONNECTED");
-            
             await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { Connecting(); });
 
-            // Brief Delay
+            // 2 Second Delay to allow for device connection
             _ticks = Environment.TickCount;
             while (Environment.TickCount - _ticks < 2000) ;
 
             await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { Connected(); });
-
             _controlsEnabled = true;
             //_alive = new System.Threading.Timer(state => { keepAlive(); }, null, 0, _alivePeriod);
         }
@@ -563,37 +569,19 @@ namespace Pilot37_RCCar
             Debug.WriteLine("BLE Watcher has STOPPED");
         }
 
-        private async void ToggleLED()
-        {
-            if (_ToggleState)
-            {
-                await Globals._GPIOCharacteristic.WriteValueAsync((new byte[] { 0 }).AsBuffer());
-            }
-            else
-            {
-                await Globals._GPIOCharacteristic.WriteValueAsync((new byte[] { 1 }).AsBuffer());
-            }
-
-            _ToggleState = !_ToggleState;
-        }
 
         // Invoked every time the BLE device connects or disconnects
         private void NordicDevice_ConnectionChange(BluetoothLEDevice sender, object args)
         {
+            Debug.WriteLine("Connection Status Event!");
+            Debug.WriteLine($"_controlsEnabled = {_controlsEnabled}");
             if (_controlsEnabled)
             {
                 Debug.WriteLine("BLE Connection Status: DISCONNECTED");
-
                 CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { NotConnected(); });
-
                 _controlsEnabled = false;
-                Helper();
+                CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { Stop(); });
             }
-        }
-
-        private async Task Helper()
-        {
-            await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { Stop(); });
         }
 
         private async void keepAlive()
@@ -601,7 +589,8 @@ namespace Pilot37_RCCar
             if (_controlsEnabled)
             {
                 await Globals._heartBeatCharacteristic.WriteValueAsync((new byte[] { 1 }).AsBuffer());
-                //'The object has been closed. (Exception from HRESULT: 0x80000013)'
+                // Exception: Moved RCCar out of Surface BLE range, then moved it back into range
+                // The object has been closed. (Exception from HRESULT: 0x80000013)
             }
         }
 
@@ -611,8 +600,7 @@ namespace Pilot37_RCCar
             {
                 DeviceInformationCollection cameraDevices = await DeviceInformation.FindAllAsync(DeviceClass.VideoCapture);
                 _fpvDevice1 = cameraDevices.First();
-
-                // TODO: Make 2 Cameras Work Eventually
+                
                 foreach (DeviceInformation device in cameraDevices)
                 {
                     if (device.Name.Contains("USB2.0 PC CAMERA"))
@@ -737,6 +725,39 @@ namespace Pilot37_RCCar
             Globals.RECENT_SPEED_1 = Globals.SLOW_SPEED_1;
             Globals.RECENT_SPEED_2 = Globals.SLOW_SPEED_2;
             await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { Globals.NEUTRAL_1, Globals.NEUTRAL_2, Globals.REVERSE_SPEED_1, Globals.REVERSE_SPEED_2 }).AsBuffer());
+            //_control = new System.Threading.Timer(state => { SendBLEControl(someForwardRightArg); }, null, 0, _controlPeriod);
+        }
+
+        private async void DonutPress()
+        {
+            Debug.WriteLine("Donut Press\n");
+            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { 0xC0, 0x07, 0xC0, 0x07 }).AsBuffer());
+            //_control = new System.Threading.Timer(state => { SendBLEControl(someDonutArg); }, null, 0, _controlPeriod);
+        }
+
+        private async void WavePress()
+        {
+            Debug.WriteLine("Wave Press\n");
+            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { 0xC0, 0x07, Globals.NEUTRAL_1, Globals.NEUTRAL_2 }).AsBuffer());
+            // Exception: Occurred when I was close to the BLE radio boundary and called this method. It means the BLE is OFF or NotInRange!
+            // System.ObjectDisposedException: 'The object has been closed. (Exception from HRESULT: 0x80000013)'
+            // Brief Delay
+            _ticks = Environment.TickCount;
+            while (Environment.TickCount - _ticks < 100) ;
+            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { 0xF8, 0x03, Globals.NEUTRAL_1, Globals.NEUTRAL_2 }).AsBuffer());
+            // Brief Delay
+            _ticks = Environment.TickCount;
+            while (Environment.TickCount - _ticks < 100) ;
+            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { 0xC0, 0x07, Globals.NEUTRAL_1, Globals.NEUTRAL_2 }).AsBuffer());
+            // Brief Delay
+            _ticks = Environment.TickCount;
+            while (Environment.TickCount - _ticks < 100) ;
+            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { 0xF8, 0x03, Globals.NEUTRAL_1, Globals.NEUTRAL_2 }).AsBuffer());
+            // Brief Delay
+            _ticks = Environment.TickCount;
+            while (Environment.TickCount - _ticks < 100) ;
+            await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { Globals.NEUTRAL_1, Globals.NEUTRAL_2, Globals.NEUTRAL_1, Globals.NEUTRAL_2 }).AsBuffer());
+            //_control = new System.Threading.Timer(state => { SendBLEControl(someDonutArg); }, null, 0, _controlPeriod);
         }
 
         private async void PausePress()

@@ -1,28 +1,10 @@
 ﻿using System;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Diagnostics;
-using System.Diagnostics.Tracing;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.UI;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Core;
-using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
-using Windows.Devices.Bluetooth;
-using Windows.Devices.Bluetooth.Advertisement;
-using Windows.Devices.Bluetooth.GenericAttributeProfile;
-using Windows.Devices.Enumeration;
-using Windows.Media.Capture;
-using Windows.Storage;
-using Windows.Storage.Streams;
 using GazeInput;
 
 
@@ -70,6 +52,10 @@ namespace Pilot37_RCCar
             TextBlock_ReverseValue.Text = Globals._reverseSetting;
             TextBlock_SharpTurnValue.Text = Globals._sharpTurnSetting;
             TextBlock_SoftTurnValue.Text = Globals._softTurnSetting;
+            if (Globals._personality)
+            {
+                PersonalityButton.Background = new SolidColorBrush(Colors.DarkGreen);
+            }
             base.OnNavigatedTo(e);
         }
 
@@ -137,7 +123,7 @@ namespace Pilot37_RCCar
                         StateChange(ControlStates.Default, SavePress, _button);
                         break;
                     default:
-                        /// Handling all the buttons that are not Dwell-activated
+                        // Handling all the buttons that are not Dwell-activated
                         Button_Handler(_button);
                         break;
                 }
@@ -173,6 +159,9 @@ namespace Pilot37_RCCar
                             break;
                     }
                     _previousSelect = b;
+                    break;
+                case "Personality":
+                    PersonailtyPress();
                     break;
                 default:
                     ValuePress(b);
@@ -225,6 +214,19 @@ namespace Pilot37_RCCar
         {
             DisconnectFromBLE();
             Application.Current.Exit();
+        }
+
+        private void PersonailtyPress()
+        {
+            if (Globals._personality)
+            {
+                PersonalityButton.Background = new SolidColorBrush(Colors.DarkRed);
+            } else
+            {
+                PersonalityButton.Background = new SolidColorBrush(Colors.DarkGreen);
+            }
+
+            Globals._personality = !Globals._personality;
         }
 
         private void DisconnectFromBLE()
@@ -308,7 +310,7 @@ namespace Pilot37_RCCar
                     break;
                 case ControlStates.SlowForward:
                     Globals._slowForwardSetting = _content;
-                    Byte[] _slowSpeeds = ConvertToControlBytes(_content, 250, true);
+                    Byte[] _slowSpeeds = ConvertToControlBytes(_content, 50, true);
                     //Debug.WriteLine($"Byte 1: {_slowSpeeds[0]:X2}, Byte 2: {_slowSpeeds[1]:X2}");
                     Globals.SLOW_SPEED_1 = _slowSpeeds[0];
                     Globals.SLOW_SPEED_2 = _slowSpeeds[1];
@@ -357,10 +359,20 @@ namespace Pilot37_RCCar
 
             if (pos)
             {
-                x = x + 1500;
+                if (range == 50)
+                {
+                    x = x + 1560;
+                } else
+                {
+                    x = x + 1500;
+                }
             } else
             {
                 x = 1500 - x;
+                if (x > 1420)
+                {
+                    x = 1420;
+                }
             }
 
             UInt16 _val = Convert.ToUInt16(x);

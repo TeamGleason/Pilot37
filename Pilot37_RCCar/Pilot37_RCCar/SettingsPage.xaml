@@ -93,11 +93,13 @@
 
             <Button x:Name="ExitButton" Grid.Row="7" Grid.Column="1" Content="Exit" Background="Gray" Foreground="Black" FontFamily="Segoe UI Symbol" FontSize="28"  Click="Settings_Button_Click" Margin="0" VerticalAlignment="Center" Height="100" Width="150" Grid.ColumnSpan="2" HorizontalAlignment="Center" />
 
-            <Button x:Name="SaveButton" Grid.Row="7" Grid.Column="3" Background="Gray" Foreground="Black" FontFamily="Segoe UI Symbol" FontSize="28"  Click="Settings_Button_Click" Margin="0" VerticalAlignment="Center" Height="100" Width="150" Grid.ColumnSpan="2" HorizontalAlignment="Right">
+            <Button x:Name="PersonalityButton" Grid.Row="7" Grid.Column="2" Content="Personality" Background="DarkRed" Foreground="Black" FontFamily="Segoe UI Symbol" FontSize="28"  Click="Settings_Button_Click" Margin="0" VerticalAlignment="Center" Height="100" Width="160" Grid.ColumnSpan="2" HorizontalAlignment="Right" />
+
+            <Button x:Name="SaveButton" Grid.Row="7" Grid.Column="4" Background="Gray" Foreground="Black" FontFamily="Segoe UI Symbol" FontSize="28"  Click="Settings_Button_Click" Margin="40,0,0,0" VerticalAlignment="Center" Height="100" Width="150" HorizontalAlignment="Center" Grid.ColumnSpan="3">
                 <TextBlock>Set  As<LineBreak/>Default </TextBlock>
             </Button>
             
-            <TextBlock x:Name="SaveStatus" HorizontalAlignment="Left" Grid.RowSpan="2" TextWrapping="Wrap" Text="Saved!" VerticalAlignment="Center" Grid.Row="7" Grid.Column="6" FontSize="30" Foreground="White" Opacity="0"/>
+            <TextBlock x:Name="SaveStatus" HorizontalAlignment="Center" Grid.RowSpan="2" TextWrapping="Wrap" Text="Saved!" VerticalAlignment="Center" Grid.Row="7" Grid.Column="6" FontSize="30" Foreground="White" Opacity="0" Margin="0" Grid.ColumnSpan="2"/>
 
             <Button x:Name="CloseButton" Grid.Row="7" Grid.Column="7" Content="Close" Background="Gray" Foreground="Black" FontFamily="Segoe UI Symbol" FontSize="28"  Click="Settings_Button_Click" Margin="0" VerticalAlignment="Center" Height="100" Width="150" Grid.ColumnSpan="2" HorizontalAlignment="Center" />
         </Grid>
