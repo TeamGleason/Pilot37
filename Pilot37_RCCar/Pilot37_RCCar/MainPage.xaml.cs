@@ -46,6 +46,8 @@ namespace Pilot37_RCCar
         public static GattCharacteristic _PWMCharacteristic = null;
         public static Guid _primaryServiceUUID = new Guid("8e9f3737-d80c-0991-c44a-3dab1a06896c");
         public static GattDeviceService _primaryService = null;
+        public static Guid _VehicleIDUUID = new Guid("8e9f3738-d80c-0991-c44a-3dab1a06896c");
+
 
         public static String _fastForwardSetting = "30%";
         public static String _slowForwardSetting = "30%";
@@ -264,16 +266,42 @@ namespace Pilot37_RCCar
         {
             Debug.WriteLine("Suspending");
             DisconnectFromBLE();
-            DisconnectFromBLE();
         }
 
         private void Application_CatchUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             // TODO: Handle things correctly! RELEASE VERSION SHOULD ALWAYS CATCH! TEST
-            Debug.WriteLine("Unhandled Exception Caught!");
+            Exception _exc = e.Exception;
+            Debug.WriteLine("\nUnhandled Exception Caught!");
+            Debug.WriteLine($"Exception Message: {_exc.Message}");
+            Debug.WriteLine($"Exception HRESULT: {_exc.HResult:X}\n");
+            Debug.WriteLine($"BLE Watcher Status: {Globals.bleWatch1.Status}\n\n");
+
             e.Handled = true;
-            PauseButton.Background = _gazedUponStop;
-            DisconnectFromBLE();
+            StopButton.Background = _gazedUponStop;
+            
+            if (_previousButton != null)
+            {
+                if (_previousButton.Name == "PauseButton")
+                {
+                    _previousButton.Background = _sideDefault;
+                } else
+                {
+                    _previousButton.Background = _navDefault;
+                }
+            }
+
+            _previousButton = StopButton;
+            _controlState = ControlStates.Stop;
+            _controlsEnabled = false;
+            NotConnected();
+
+            // TODO: Completely create a new BLE Advertisement Watcher!
+            if (Globals.bleWatch1.Status.Equals(BluetoothLEAdvertisementWatcherStatus.Created))
+            {
+                Globals.bleWatch1.Start();
+            }
+            //DisconnectFromBLE();
         }
 
         private void DisconnectFromBLE()
@@ -435,6 +463,7 @@ namespace Pilot37_RCCar
             if (!Globals._firstTimeHere)
             {
                 Globals._gaze.GazePointerEvent += OnGazePointerEvent;
+
             }
             else
             {
@@ -443,6 +472,8 @@ namespace Pilot37_RCCar
                 //            - Example: _controlsEnabled is printed as 'True', but no Buttons can be clicked and GUI is still RED
                 //            - Example: "BLE Connection Status: CONNECTED/DISCONNECTED" always prints as expected...but UI doesnt respond
                 //        Without navigating to the SettingsPage, everything works!
+
+
                 // Create a watcher to find a BLE Device with name "Pilot 37"
                 Globals._bleAdv1 = new BluetoothLEAdvertisement();
                 Globals._bleAdv1.LocalName = "Pilot 37";
@@ -451,8 +482,15 @@ namespace Pilot37_RCCar
                 Globals.bleWatch1 = new BluetoothLEAdvertisementWatcher(Globals._bleAdvFilter1);
 
                 //TODO: Make a filter with the Manufacturer Data/Device ID, not a LocalName string
+                //Globals._bleAdv1 = new BluetoothLEAdvertisement();
+                //Globals._bleAdv1.ServiceUuids.Add(Globals._primaryServiceUUID);
+                //Globals._bleAdvFilter1 = new BluetoothLEAdvertisementFilter();
+                //Globals._bleAdvFilter1.Advertisement = Globals._bleAdv1;
+                //Globals.bleWatch1 = new BluetoothLEAdvertisementWatcher(Globals._bleAdvFilter1);
+
                 //Globals.bleWatch1 = new BluetoothLEAdvertisementWatcher();
                 //Globals.bleWatch1.AdvertisementFilter.Advertisement.ServiceUuids.Add(Globals._primaryServiceUUID);
+
                 //var manufacturerData = new BluetoothLEManufacturerData();
                 //manufacturerData.CompanyId = 0x0059;
                 //Globals.bleWatch1.AdvertisementFilter.Advertisement.ManufacturerData.Add(manufacturerData);
@@ -463,6 +501,7 @@ namespace Pilot37_RCCar
             }
             await InitializeCameraAsync();
             _controlsEnabled = Globals._controlsEnabledPrev;
+            Debug.WriteLine($"_controlsEnabled: {_controlsEnabled}");
             if (_controlsEnabled)
             {
                 Connected();
@@ -571,16 +610,16 @@ namespace Pilot37_RCCar
 
 
         // Invoked every time the BLE device connects or disconnects
-        private void NordicDevice_ConnectionChange(BluetoothLEDevice sender, object args)
+        private async void NordicDevice_ConnectionChange(BluetoothLEDevice sender, object args)
         {
             Debug.WriteLine("Connection Status Event!");
             Debug.WriteLine($"_controlsEnabled = {_controlsEnabled}");
             if (_controlsEnabled)
             {
                 Debug.WriteLine("BLE Connection Status: DISCONNECTED");
-                CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { NotConnected(); });
+                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { NotConnected(); });
                 _controlsEnabled = false;
-                CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { Stop(); });
+                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { Stop(); });
             }
         }
 
