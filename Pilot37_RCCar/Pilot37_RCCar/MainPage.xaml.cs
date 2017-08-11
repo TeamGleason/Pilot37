@@ -270,42 +270,43 @@ namespace Pilot37_RCCar
 
         private void Application_CatchUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            // TODO: Handle things correctly! RELEASE VERSION SHOULD ALWAYS CATCH! TEST
+            // TODO: Test on a new target with an installed version of this app
             Exception _exc = e.Exception;
             Debug.WriteLine("\nUnhandled Exception Caught!");
             Debug.WriteLine($"Exception Message: {_exc.Message}");
             Debug.WriteLine($"Exception HRESULT: {_exc.HResult:X}\n");
             Debug.WriteLine($"BLE Watcher Status: {Globals.bleWatch1.Status}\n\n");
-
-            e.Handled = true;
-            StopButton.Background = _gazedUponStop;
             
-            if (_previousButton != null)
+            switch ((UInt32) _exc.HResult)
             {
-                if (_previousButton.Name == "PauseButton")
-                {
-                    _previousButton.Background = _sideDefault;
-                } else
-                {
-                    _previousButton.Background = _navDefault;
-                }
-            }
+                case 0x80000013:
+                    e.Handled = true;
+                    StopButton.Background = _gazedUponStop;
+                    if (_previousButton != null)
+                    {
+                        if (_previousButton.Name == "PauseButton")
+                        {
+                            _previousButton.Background = _sideDefault;
+                        }
+                        else
+                        {
+                            _previousButton.Background = _navDefault;
+                        }
+                    }
 
-            _previousButton = StopButton;
-            _controlState = ControlStates.Stop;
-            _controlsEnabled = false;
-            NotConnected();
-
-            // TODO: Completely create a new BLE Advertisement Watcher!
-            if (Globals.bleWatch1.Status.Equals(BluetoothLEAdvertisementWatcherStatus.Created))
-            {
-                Globals.bleWatch1.Start();
+                    _previousButton = StopButton;
+                    _controlState = ControlStates.Stop;
+                    _controlsEnabled = false;
+                    NotConnected();
+                    break;
+                default:
+                    break;
             }
-            //DisconnectFromBLE();
         }
 
         private void DisconnectFromBLE()
         {
+            // TODO: Make this work!
             // Place the RC Car into a safe STOP state
             if (Globals._nordic != null && Globals._PWMCharacteristic != null)
             {
@@ -463,43 +464,10 @@ namespace Pilot37_RCCar
             if (!Globals._firstTimeHere)
             {
                 Globals._gaze.GazePointerEvent += OnGazePointerEvent;
-
-            }
-            else
-            {
-                // Exception: NOT A REAL EXCEPTION THROWN! Any time after navigating TO/FROM SettingsPage, the BLE connection behavior messes up!
-                //        In the Debug statements, the behavior under the hood seems perfect, but clearly isnt actually working
-                //            - Example: _controlsEnabled is printed as 'True', but no Buttons can be clicked and GUI is still RED
-                //            - Example: "BLE Connection Status: CONNECTED/DISCONNECTED" always prints as expected...but UI doesnt respond
-                //        Without navigating to the SettingsPage, everything works!
-
-
-                // Create a watcher to find a BLE Device with name "Pilot 37"
-                Globals._bleAdv1 = new BluetoothLEAdvertisement();
-                Globals._bleAdv1.LocalName = "Pilot 37";
-                Globals._bleAdvFilter1 = new BluetoothLEAdvertisementFilter();
-                Globals._bleAdvFilter1.Advertisement = Globals._bleAdv1;
-                Globals.bleWatch1 = new BluetoothLEAdvertisementWatcher(Globals._bleAdvFilter1);
-
-                //TODO: Make a filter with the Manufacturer Data/Device ID, not a LocalName string
-                //Globals._bleAdv1 = new BluetoothLEAdvertisement();
-                //Globals._bleAdv1.ServiceUuids.Add(Globals._primaryServiceUUID);
-                //Globals._bleAdvFilter1 = new BluetoothLEAdvertisementFilter();
-                //Globals._bleAdvFilter1.Advertisement = Globals._bleAdv1;
-                //Globals.bleWatch1 = new BluetoothLEAdvertisementWatcher(Globals._bleAdvFilter1);
-
-                //Globals.bleWatch1 = new BluetoothLEAdvertisementWatcher();
-                //Globals.bleWatch1.AdvertisementFilter.Advertisement.ServiceUuids.Add(Globals._primaryServiceUUID);
-
-                //var manufacturerData = new BluetoothLEManufacturerData();
-                //manufacturerData.CompanyId = 0x0059;
-                //Globals.bleWatch1.AdvertisementFilter.Advertisement.ManufacturerData.Add(manufacturerData);
-
-                Globals.bleWatch1.Received += BLEWatcher_Received;
-                Globals.bleWatch1.Stopped += BLEWatcher_Stopped;
-                Globals.bleWatch1.Start();
             }
             await InitializeCameraAsync();
+
+            CreateBLEWatcher();
             _controlsEnabled = Globals._controlsEnabledPrev;
             Debug.WriteLine($"_controlsEnabled: {_controlsEnabled}");
             if (_controlsEnabled)
@@ -509,11 +477,41 @@ namespace Pilot37_RCCar
             base.OnNavigatedTo(e);
         }
 
+        private void CreateBLEWatcher()
+        {
+            // Create a watcher to find a BLE Device with name "Pilot 37"
+            Globals._bleAdv1 = new BluetoothLEAdvertisement();
+            Globals._bleAdv1.LocalName = "Pilot 37";
+            Globals._bleAdvFilter1 = new BluetoothLEAdvertisementFilter();
+            Globals._bleAdvFilter1.Advertisement = Globals._bleAdv1;
+            Globals.bleWatch1 = new BluetoothLEAdvertisementWatcher(Globals._bleAdvFilter1);
+
+            //TODO: Make a filter with the Manufacturer Data/Device ID, not a LocalName string
+            //Globals._bleAdv1 = new BluetoothLEAdvertisement();
+            //Globals._bleAdv1.ServiceUuids.Add(Globals._primaryServiceUUID);
+            //Globals._bleAdvFilter1 = new BluetoothLEAdvertisementFilter();
+            //Globals._bleAdvFilter1.Advertisement = Globals._bleAdv1;
+            //Globals.bleWatch1 = new BluetoothLEAdvertisementWatcher(Globals._bleAdvFilter1);
+
+            //Globals.bleWatch1 = new BluetoothLEAdvertisementWatcher();
+            //Globals.bleWatch1.AdvertisementFilter.Advertisement.ServiceUuids.Add(Globals._primaryServiceUUID);
+
+            //var manufacturerData = new BluetoothLEManufacturerData();
+            //manufacturerData.CompanyId = 0x0059;
+            //Globals.bleWatch1.AdvertisementFilter.Advertisement.ManufacturerData.Add(manufacturerData);
+
+            Globals.bleWatch1.Received += BLEWatcher_Received;
+            Globals.bleWatch1.Stopped += BLEWatcher_Stopped;
+            Globals.bleWatch1.Start();
+            Debug.WriteLine("BLE Watcher has STARTED");
+        }
+
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             Globals._gaze.GazePointerEvent -= OnGazePointerEvent;
             Globals._controlsEnabledPrev = _controlsEnabled;
             _controlsEnabled = false;
+            Globals.bleWatch1.Stop();
             base.OnNavigatedFrom(e);
         }
 
@@ -564,6 +562,7 @@ namespace Pilot37_RCCar
 
             await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { Connected(); });
             _controlsEnabled = true;
+            // Uncomment below to Enable Heart
             //_alive = new System.Threading.Timer(state => { keepAlive(); }, null, 0, _alivePeriod);
         }
 
@@ -628,8 +627,6 @@ namespace Pilot37_RCCar
             if (_controlsEnabled)
             {
                 await Globals._heartBeatCharacteristic.WriteValueAsync((new byte[] { 1 }).AsBuffer());
-                // Exception: Moved RCCar out of Surface BLE range, then moved it back into range
-                // The object has been closed. (Exception from HRESULT: 0x80000013)
             }
         }
 
@@ -778,8 +775,6 @@ namespace Pilot37_RCCar
         {
             Debug.WriteLine("Wave Press\n");
             await Globals._PWMCharacteristic.WriteValueAsync((new byte[] { 0xC0, 0x07, Globals.NEUTRAL_1, Globals.NEUTRAL_2 }).AsBuffer());
-            // Exception: Occurred when I was close to the BLE radio boundary and called this method. It means the BLE is OFF or NotInRange!
-            // System.ObjectDisposedException: 'The object has been closed. (Exception from HRESULT: 0x80000013)'
             // Brief Delay
             _ticks = Environment.TickCount;
             while (Environment.TickCount - _ticks < 100) ;

@@ -78,7 +78,7 @@ namespace Pilot37_RCCar
                 }
                 // Ensure the current window is active
 
-                //ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
+                ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
 
                 Window.Current.Activate();
             }
