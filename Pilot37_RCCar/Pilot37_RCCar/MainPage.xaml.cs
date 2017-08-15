@@ -117,7 +117,7 @@ namespace Pilot37_RCCar
         {
             InitializeComponent();
             _previousButton = StopButton;
-            Loaded += new RoutedEventHandler(MainPage_OnLoaded);
+            Loaded += MainPage_OnLoaded;
             Application.Current.Resuming += Application_Resuming;
             Application.Current.Suspending += Application_Suspending;
             Application.Current.UnhandledException += new UnhandledExceptionEventHandler(Application_CatchUnhandledException);
@@ -128,6 +128,7 @@ namespace Pilot37_RCCar
             // Set up the a GazePointer object and make it visible on screen
             if (Globals._firstTimeHere)
             {
+                // TODO: Initilize with "this" and create a new GazePointer on each Page Navigation
                 Globals._gaze = new GazePointer(Window.Current.Content);
                 Globals._gaze.CursorRadius = 6;
                 Globals._gaze.IsCursorVisible = true;
@@ -270,7 +271,6 @@ namespace Pilot37_RCCar
 
         private void Application_CatchUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            // TODO: Test on a new target with an installed version of this app
             Exception _exc = e.Exception;
             Debug.WriteLine("\nUnhandled Exception Caught!");
             Debug.WriteLine($"Exception Message: {_exc.Message}");
@@ -306,7 +306,6 @@ namespace Pilot37_RCCar
 
         private void DisconnectFromBLE()
         {
-            // TODO: Make this work!
             // Place the RC Car into a safe STOP state
             if (Globals._nordic != null && Globals._PWMCharacteristic != null)
             {
@@ -479,26 +478,29 @@ namespace Pilot37_RCCar
 
         private void CreateBLEWatcher()
         {
-            // Create a watcher to find a BLE Device with name "Pilot 37"
+            // Known Issues:
+            //    - Navigating to SettingsPage before connecting to BLE will make the app non-responsive to the new connection
+            //      that is attempted once returning to MainPage (happens after disconnecting from a previous connection, or before anything)
+            //          > Under the hood, the Surface BLE does establish a connection but for some reason the high level UI doesnt respond
+            //          > MainPage is being GarbageCollected during navigation to Settings...Collecting the BLE watcher stuff?
+            //    - Navigating to SettingsPage after connecting to BLE will make the app non-responsive to the next time the BLE
+            //      disconnects (Out of range, No power, etc)
+            //          > LOW PRIORITY BUG because ExceptionHandlers will catch when users try and send commands, which will happen because the GUI
+            //            does not indicate any disconnection, and this is handled by forcing the app into a DISCONNECTED state...then its good2go
+            //          > HeartBeat can trigger this exception to be handled virtually immediately
+            //
+            //    + Possible TODOS:
+            //      ==> Disconnect from BLE and dispose Watcher, then Create new Watcher
+            //      ==> Prevent switching to Settings until the connection is established
+
+            // Create a watcher to find a BLE Device with the correct UUID (or LocalName - commented out)
             Globals._bleAdv1 = new BluetoothLEAdvertisement();
-            Globals._bleAdv1.LocalName = "Pilot 37";
+            Globals._bleAdv1.ServiceUuids.Add(Globals._primaryServiceUUID);
+            //Globals._bleAdv1.LocalName = "Pilot 37";
             Globals._bleAdvFilter1 = new BluetoothLEAdvertisementFilter();
             Globals._bleAdvFilter1.Advertisement = Globals._bleAdv1;
             Globals.bleWatch1 = new BluetoothLEAdvertisementWatcher(Globals._bleAdvFilter1);
-
-            //TODO: Make a filter with the Manufacturer Data/Device ID, not a LocalName string
-            //Globals._bleAdv1 = new BluetoothLEAdvertisement();
-            //Globals._bleAdv1.ServiceUuids.Add(Globals._primaryServiceUUID);
-            //Globals._bleAdvFilter1 = new BluetoothLEAdvertisementFilter();
-            //Globals._bleAdvFilter1.Advertisement = Globals._bleAdv1;
-            //Globals.bleWatch1 = new BluetoothLEAdvertisementWatcher(Globals._bleAdvFilter1);
-
-            //Globals.bleWatch1 = new BluetoothLEAdvertisementWatcher();
-            //Globals.bleWatch1.AdvertisementFilter.Advertisement.ServiceUuids.Add(Globals._primaryServiceUUID);
-
-            //var manufacturerData = new BluetoothLEManufacturerData();
-            //manufacturerData.CompanyId = 0x0059;
-            //Globals.bleWatch1.AdvertisementFilter.Advertisement.ManufacturerData.Add(manufacturerData);
+            Globals.bleWatch1.ScanningMode = BluetoothLEScanningMode.Active;
 
             Globals.bleWatch1.Received += BLEWatcher_Received;
             Globals.bleWatch1.Stopped += BLEWatcher_Stopped;
@@ -511,7 +513,7 @@ namespace Pilot37_RCCar
             Globals._gaze.GazePointerEvent -= OnGazePointerEvent;
             Globals._controlsEnabledPrev = _controlsEnabled;
             _controlsEnabled = false;
-            Globals.bleWatch1.Stop();
+            //Globals.bleWatch1.Stop();
             base.OnNavigatedFrom(e);
         }
 
