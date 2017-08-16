@@ -80,7 +80,7 @@ namespace Pilot37_RCCar
     public sealed partial class MainPage : Page
     {
         private System.Threading.Timer _alive, _control;
-        private static int _alivePeriod = 500, _controlPeriod = 3000;
+        private static int _alivePeriod = 100, _controlPeriod = 500;
 
         private MediaCapture _mediacCapture1;
         private DeviceInformation _fpvDevice1;
@@ -273,9 +273,6 @@ namespace Pilot37_RCCar
         {
             Exception _exc = e.Exception;
             Debug.WriteLine("\nUnhandled Exception Caught!");
-            Debug.WriteLine($"Exception Message: {_exc.Message}");
-            Debug.WriteLine($"Exception HRESULT: {_exc.HResult:X}\n");
-            Debug.WriteLine($"BLE Watcher Status: {Globals.bleWatch1.Status}\n\n");
             
             switch ((UInt32) _exc.HResult)
             {
@@ -372,7 +369,7 @@ namespace Pilot37_RCCar
                 switch (ea.State)
                 {
                     case GazePointerState.Fixation:
-                        if (_button.Equals(PauseButton) || _button.Equals(SettingsButton))
+                        if (_button.Equals(PauseButton) || _button.Equals(SettingsButton) || _button.Equals(ExitButton))
                         {
                             return;
                         }
@@ -386,6 +383,9 @@ namespace Pilot37_RCCar
                                 break;
                             case "SettingsButton":
                                 SettingsPress();
+                                break;
+                            case "ExitButton":
+                                ExitPress();
                                 break;
                         }
                         break;
@@ -464,35 +464,24 @@ namespace Pilot37_RCCar
             {
                 Globals._gaze.GazePointerEvent += OnGazePointerEvent;
             }
-            await InitializeCameraAsync();
 
-            CreateBLEWatcher();
             _controlsEnabled = Globals._controlsEnabledPrev;
             Debug.WriteLine($"_controlsEnabled: {_controlsEnabled}");
             if (_controlsEnabled)
             {
                 Connected();
+            } else
+            {
+                NotConnected();
             }
+
+            await InitializeCameraAsync();
+            CreateBLEWatcher();
             base.OnNavigatedTo(e);
         }
 
         private void CreateBLEWatcher()
         {
-            // Known Issues:
-            //    - Navigating to SettingsPage before connecting to BLE will make the app non-responsive to the new connection
-            //      that is attempted once returning to MainPage (happens after disconnecting from a previous connection, or before anything)
-            //          > Under the hood, the Surface BLE does establish a connection but for some reason the high level UI doesnt respond
-            //          > MainPage is being GarbageCollected during navigation to Settings...Collecting the BLE watcher stuff?
-            //    - Navigating to SettingsPage after connecting to BLE will make the app non-responsive to the next time the BLE
-            //      disconnects (Out of range, No power, etc)
-            //          > LOW PRIORITY BUG because ExceptionHandlers will catch when users try and send commands, which will happen because the GUI
-            //            does not indicate any disconnection, and this is handled by forcing the app into a DISCONNECTED state...then its good2go
-            //          > HeartBeat can trigger this exception to be handled virtually immediately
-            //
-            //    + Possible TODOS:
-            //      ==> Disconnect from BLE and dispose Watcher, then Create new Watcher
-            //      ==> Prevent switching to Settings until the connection is established
-
             // Create a watcher to find a BLE Device with the correct UUID (or LocalName - commented out)
             Globals._bleAdv1 = new BluetoothLEAdvertisement();
             Globals._bleAdv1.ServiceUuids.Add(Globals._primaryServiceUUID);
@@ -513,7 +502,7 @@ namespace Pilot37_RCCar
             Globals._gaze.GazePointerEvent -= OnGazePointerEvent;
             Globals._controlsEnabledPrev = _controlsEnabled;
             _controlsEnabled = false;
-            //Globals.bleWatch1.Stop();
+            Globals.bleWatch1.Stop();
             base.OnNavigatedFrom(e);
         }
 
@@ -564,7 +553,8 @@ namespace Pilot37_RCCar
 
             await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { Connected(); });
             _controlsEnabled = true;
-            // Uncomment below to Enable Heart
+            // Uncomment/Comment below to enable/disable Heartbeat
+            // WARNING: Has NOT been tested and WILL have bugs
             //_alive = new System.Threading.Timer(state => { keepAlive(); }, null, 0, _alivePeriod);
         }
 
@@ -578,12 +568,16 @@ namespace Pilot37_RCCar
         {
             ConnectionStatus.Foreground = new SolidColorBrush(Colors.Green);
             ConnectionStatus.Text = "Connected";
+            SettingsButton.Visibility = Visibility.Visible;
+            ExitButton.Visibility = Visibility.Collapsed;
         }
 
         private void NotConnected()
         {
             ConnectionStatus.Foreground = new SolidColorBrush(Colors.Red);
-            ConnectionStatus.Text = "Not Connected";
+            ConnectionStatus.Text = "Scanning for BLE";
+            SettingsButton.Visibility = Visibility.Collapsed;
+            ExitButton.Visibility = Visibility.Visible;
         }
 
         private void SetEachCharacteristic(GattCharacteristic c)
@@ -680,6 +674,9 @@ namespace Pilot37_RCCar
                         return;
                     case "SettingsButton":
                         SettingsPress();
+                        return;
+                    case "ExitButton":
+                        ExitPress();
                         return;
                     default:
                         Button_Handler(_button);
@@ -843,6 +840,12 @@ namespace Pilot37_RCCar
 
             Frame.Navigate(typeof(SettingsPage));
 
+        }
+
+        private void ExitPress()
+        {
+            DisconnectFromBLE();
+            Application.Current.Exit();
         }
         #endregion
     }

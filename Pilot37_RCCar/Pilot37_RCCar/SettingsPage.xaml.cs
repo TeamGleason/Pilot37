@@ -11,7 +11,7 @@ using GazeInput;
 namespace Pilot37_RCCar
 {
     /// <summary>
-    /// 
+    /// Settings Page for the Pilot37 RC Car application
     /// </summary>
     public sealed partial class SettingsPage : Page
     {
