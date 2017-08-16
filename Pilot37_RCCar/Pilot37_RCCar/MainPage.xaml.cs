@@ -295,10 +295,20 @@ namespace Pilot37_RCCar
                     _controlState = ControlStates.Stop;
                     _controlsEnabled = false;
                     NotConnected();
+                    NullBLE();
                     break;
                 default:
                     break;
             }
+        }
+
+        private void NullBLE()
+        {
+            Globals._heartBeatCharacteristic = null;
+            Globals._GPIOCharacteristic = null;
+            Globals._PWMCharacteristic = null;
+            Globals._primaryService = null;
+            Globals._nordic = null;
         }
 
         private void DisconnectFromBLE()
@@ -319,11 +329,11 @@ namespace Pilot37_RCCar
             }
 
             // Dispose all BLE related variables
-            if (_alive != null)
-            {
-                _alive.Dispose();
-                _alive = null;
-            }
+            //if (_alive != null)
+            //{
+            //    _alive.Dispose();
+            //    _alive = null;
+            //}
 
             if (Globals._heartBeatCharacteristic != null)
             {

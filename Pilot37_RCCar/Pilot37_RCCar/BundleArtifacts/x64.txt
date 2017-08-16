@@ -1,2 +1,2 @@
-MainPackage=C:\Users\t-cosing\Desktop\Pilot37_RCCar\Pilot37_RCCar\bin\x64\Release\Pilot37_RCCar_1.0.13.0_x64.appx
-SymbolPackage=C:\Users\t-cosing\Desktop\Pilot37_RCCar\Pilot37_RCCar\AppPackages\Pilot37_RCCar_1.0.13.0_Test\Pilot37_RCCar_1.0.13.0_x64.appxsym
+MainPackage=C:\Users\t-cosing\Desktop\Pilot37_RCCar\Pilot37_RCCar\bin\x64\Release\Pilot37_RCCar_1.0.15.0_x64.appx
+SymbolPackage=C:\Users\t-cosing\Desktop\Pilot37_RCCar\Pilot37_RCCar\AppPackages\Pilot37_RCCar_1.0.15.0_Test\Pilot37_RCCar_1.0.15.0_x64.appxsym
