@@ -29,8 +29,8 @@ namespace Pilot37_RCCar
         public static GazePointer _gaze;
         public static Visibility _donut = Visibility.Collapsed;
         public static Visibility _wave = Visibility.Collapsed;
-        public static bool _firstTimeHere = true;
         public static bool _personality = false;
+        public static bool _firstTimeHere = true;
         public static bool _controlsEnabledPrev = false;
 
         public static BluetoothLEAdvertisement _bleAdv1 = null;
@@ -79,13 +79,26 @@ namespace Pilot37_RCCar
 
     public sealed partial class MainPage : Page
     {
-        private System.Threading.Timer _alive, _control;
-        private static int _alivePeriod = 100, _controlPeriod = 500;
+        // TODO: Heartbeat is currently DISABLED on this app.
+        //    - "_alive" is the thread responsible for sending continuous Heartbeat pings to the BLE device
+        //    - Enabling the Heartbeat feature will NOT be as simple as uncommenting the code further below
+        //         > EXPECT BUGGY BEHAVIOR FROM THIS DUE TO NAVIGATION TO/FROM SettingsPage
+        private System.Threading.Timer _alive;
+        private static int _alivePeriod = 100;
 
+        // TODO: "_control" is the thread responsible for repetitively sending commands to the BLE device when in a certain state
+        //    - The BLE device firmware exhibits buggy behavior when the "_control" thread is active (currently DISABLED)
+        //    - When the BLE device receives repetitive commands, there is a periodic jolting behavior in the RC Car servo motors
+        //         > Firmware should update to seamlessly handle the incoming commands
+        private System.Threading.Timer _control;
+        private static int _controlPeriod = 500;
+
+        // FPV camera related variables
         private MediaCapture _mediacCapture1;
         private DeviceInformation _fpvDevice1;
         private CaptureElement _frontCam;
 
+        // GUI variables
         SolidColorBrush _navDefault = new SolidColorBrush(Colors.AliceBlue);
         SolidColorBrush _sideDefault = new SolidColorBrush(Colors.Blue);
         SolidColorBrush _gazedUpon = new SolidColorBrush(Colors.Lime);
@@ -129,6 +142,7 @@ namespace Pilot37_RCCar
             if (Globals._firstTimeHere)
             {
                 // TODO: Initilize with "this" and create a new GazePointer on each Page Navigation
+                //    - This is in accordance with the standard programming patterns of Eye Gaze projects
                 Globals._gaze = new GazePointer(Window.Current.Content);
                 Globals._gaze.CursorRadius = 6;
                 Globals._gaze.IsCursorVisible = true;
@@ -277,6 +291,7 @@ namespace Pilot37_RCCar
             switch ((UInt32) _exc.HResult)
             {
                 case 0x80000013:
+                    // This exception means the BLE device has been closed (eg, Turned OFF, Out of BLE Range, etc)
                     e.Handled = true;
                     StopButton.Background = _gazedUponStop;
                     if (_previousButton != null)
@@ -295,6 +310,7 @@ namespace Pilot37_RCCar
                     _controlState = ControlStates.Stop;
                     _controlsEnabled = false;
                     NotConnected();
+                    // BLE has been closed so nullify all related BLE variables
                     NullBLE();
                     break;
                 default:
@@ -328,13 +344,14 @@ namespace Pilot37_RCCar
                 Globals.bleWatch1 = null;
             }
 
-            // Dispose all BLE related variables
+            // Only useful when the Heartbeat functionality is enabled
             //if (_alive != null)
             //{
             //    _alive.Dispose();
             //    _alive = null;
             //}
 
+            // Dispose all BLE related variables
             if (Globals._heartBeatCharacteristic != null)
             {
                 if (Globals._heartBeatCharacteristic.Service != null)
@@ -359,109 +376,6 @@ namespace Pilot37_RCCar
             }
             Globals._nordic = null;
         }
-
-        #region Gaze Event
-        private void OnGazePointerEvent(GazePointer sender, GazePointerEventArgs ea)
-        {
-            // Figure out what part of the GUI is currently being gazed upon
-            UIElement _temp = ea.HitTarget;
-            var _button = _temp as Button;
-
-            // Eyes Off event
-            if (_temp == null && _controlsEnabled)
-            {
-                Debug.WriteLine("Eyes Off Event!");
-                Stop();
-            }
-            // Button Selection event
-            else if (_button != null)
-            {
-                switch (ea.State)
-                {
-                    case GazePointerState.Fixation:
-                        if (_button.Equals(PauseButton) || _button.Equals(SettingsButton) || _button.Equals(ExitButton))
-                        {
-                            return;
-                        }
-                        Button_Handler(_button);
-                        break;
-                    case GazePointerState.Dwell:
-                        switch (_button.Name)
-                        {
-                            case "PauseButton":
-                                PausePress();
-                                break;
-                            case "SettingsButton":
-                                SettingsPress();
-                                break;
-                            case "ExitButton":
-                                ExitPress();
-                                break;
-                        }
-                        break;
-                }
-            }
-        }
-
-        // Highlight the button that is currently gazed upon, set _previous, and trigger the appropriate callback
-        private void Button_Handler(Button b)
-        {
-            if (_paused || !_controlsEnabled)
-            {
-                return;
-            }
-
-            if (_previousButton != null && _previousButton != b)
-            {
-                if (_previousButton == PauseButton || _previousButton == SettingsButton)
-                {
-                    _previousButton.Background = _sideDefault;
-                }
-                else
-                {
-                    _previousButton.Background = _navDefault;
-                }
-            }
-
-            b.Background = _gazedUpon;
-            _previousButton = b;
-
-            switch (b.Name)
-            {
-                case "SlowForwardButton":
-                    StateChange(ControlStates.SlowForward, SlowForwardPress);
-                    break;
-                case "FastForwardButton":
-                    StateChange(ControlStates.FastForward, FastForwardPress);
-                    break;
-                case "SoftLeftButton":
-                    StateChange(ControlStates.SoftLeft, SoftLeftPress);
-                    break;
-                case "SoftRightButton":
-                    StateChange(ControlStates.SoftRight, SoftRightPress);
-                    break;
-                case "SharpLeftButton":
-                    StateChange(ControlStates.SharpLeft, SharpLeftPress);
-                    break;
-                case "SharpRightButton":
-                    StateChange(ControlStates.SharpRight, SharpRightPress);
-                    break;
-                case "StopButton":
-                    StopButton.Background = _gazedUponStop;
-                    StateChange(ControlStates.Stop, StopPress);
-                    break;
-                case "ReverseButton":
-                    StateChange(ControlStates.Reverse, ReversePress);
-                    break;
-                case "DonutButton":
-                    StateChange(ControlStates.Donut, DonutPress);
-                    break;
-                case "WaveButton":
-                    StateChange(ControlStates.Wave, WavePress);
-                    break;
-            }
-        }
-        #endregion
 
         private async void Application_Resuming(object sender, object o)
         {
@@ -564,10 +478,29 @@ namespace Pilot37_RCCar
             await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { Connected(); });
             _controlsEnabled = true;
             // Uncomment/Comment below to enable/disable Heartbeat
-            // WARNING: Has NOT been tested and WILL have bugs
+            //     - WARNING: Has NOT been tested and WILL have bugs
             //_alive = new System.Threading.Timer(state => { keepAlive(); }, null, 0, _alivePeriod);
         }
 
+        private void SetEachCharacteristic(GattCharacteristic c)
+        {
+            if (c.Uuid.Equals(Globals._heartBeatGUID))
+            {
+                Globals._heartBeatCharacteristic = c;
+            }
+
+            if (c.Uuid.Equals(Globals._GPIOGUID))
+            {
+                Globals._GPIOCharacteristic = c;
+            }
+
+            if (c.Uuid.Equals(Globals._PWMGUID))
+            {
+                Globals._PWMCharacteristic = c;
+            }
+        }
+
+        #region BLE GUI Update Functions
         private void Connecting()
         {
             ConnectionStatus.Foreground = new SolidColorBrush(Colors.Yellow);
@@ -589,24 +522,7 @@ namespace Pilot37_RCCar
             SettingsButton.Visibility = Visibility.Collapsed;
             ExitButton.Visibility = Visibility.Visible;
         }
-
-        private void SetEachCharacteristic(GattCharacteristic c)
-        {
-            if (c.Uuid.Equals(Globals._heartBeatGUID))
-            {
-                Globals._heartBeatCharacteristic = c;
-            }
-
-            if (c.Uuid.Equals(Globals._GPIOGUID))
-            {
-                Globals._GPIOCharacteristic = c;
-            }
-
-            if (c.Uuid.Equals(Globals._PWMGUID))
-            {
-                Globals._PWMCharacteristic = c;
-            }
-        }
+        #endregion
 
         private void BLEWatcher_Stopped(BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementWatcherStoppedEventArgs args)
         {
@@ -628,6 +544,7 @@ namespace Pilot37_RCCar
             }
         }
 
+        // Function called by Heartbeat thread
         private async void keepAlive()
         {
             if (_controlsEnabled)
@@ -660,18 +577,51 @@ namespace Pilot37_RCCar
             }
         }
 
-        private void Stop()
+        #region Button Handling
+        // Button interactivity for Eye Gaze
+        private void OnGazePointerEvent(GazePointer sender, GazePointerEventArgs ea)
         {
-            if (_previousButton != PauseButton)
+            // Figure out what part of the GUI is currently being gazed upon
+            UIElement _temp = ea.HitTarget;
+            var _button = _temp as Button;
+
+            // Eyes Off event
+            if (_temp == null && _controlsEnabled)
             {
-                _previousButton.Background = _navDefault;
+                Debug.WriteLine("Eyes Off Event!");
+                Stop();
             }
-            _previousButton = StopButton;
-            StopButton.Background = _gazedUponStop;
-            StateChange(ControlStates.Stop, StopPress);
+            // Button Selection event
+            else if (_button != null)
+            {
+                switch (ea.State)
+                {
+                    case GazePointerState.Fixation:
+                        if (_button.Equals(PauseButton) || _button.Equals(SettingsButton) || _button.Equals(ExitButton))
+                        {
+                            return;
+                        }
+                        Button_Handler(_button);
+                        break;
+                    case GazePointerState.Dwell:
+                        switch (_button.Name)
+                        {
+                            case "PauseButton":
+                                PausePress();
+                                break;
+                            case "SettingsButton":
+                                SettingsPress();
+                                break;
+                            case "ExitButton":
+                                ExitPress();
+                                break;
+                        }
+                        break;
+                }
+            }
         }
 
-        #region Button Callbacks
+        // Button interactivity for standard mouse click
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             var _button = sender as Button;
@@ -695,6 +645,67 @@ namespace Pilot37_RCCar
             }
         }
 
+        // Regardless of whether the Button was triggered by Eye Gaze or mouse click, handle it here
+        // Highlight the button that is currently gazed upon, set _previous, and trigger the appropriate callback
+        private void Button_Handler(Button b)
+        {
+            if (_paused || !_controlsEnabled)
+            {
+                return;
+            }
+
+            if (_previousButton != null && _previousButton != b)
+            {
+                if (_previousButton == PauseButton || _previousButton == SettingsButton)
+                {
+                    _previousButton.Background = _sideDefault;
+                }
+                else
+                {
+                    _previousButton.Background = _navDefault;
+                }
+            }
+
+            b.Background = _gazedUpon;
+            _previousButton = b;
+
+            switch (b.Name)
+            {
+                case "SlowForwardButton":
+                    StateChange(ControlStates.SlowForward, SlowForwardPress);
+                    break;
+                case "FastForwardButton":
+                    StateChange(ControlStates.FastForward, FastForwardPress);
+                    break;
+                case "SoftLeftButton":
+                    StateChange(ControlStates.SoftLeft, SoftLeftPress);
+                    break;
+                case "SoftRightButton":
+                    StateChange(ControlStates.SoftRight, SoftRightPress);
+                    break;
+                case "SharpLeftButton":
+                    StateChange(ControlStates.SharpLeft, SharpLeftPress);
+                    break;
+                case "SharpRightButton":
+                    StateChange(ControlStates.SharpRight, SharpRightPress);
+                    break;
+                case "StopButton":
+                    StopButton.Background = _gazedUponStop;
+                    StateChange(ControlStates.Stop, StopPress);
+                    break;
+                case "ReverseButton":
+                    StateChange(ControlStates.Reverse, ReversePress);
+                    break;
+                case "DonutButton":
+                    StateChange(ControlStates.Donut, DonutPress);
+                    break;
+                case "WaveButton":
+                    StateChange(ControlStates.Wave, WavePress);
+                    break;
+            }
+        }
+        #endregion
+
         private void StateChange(ControlStates state, Action func)
         {
             if (_controlState != state && _controlsEnabled)
@@ -705,6 +716,18 @@ namespace Pilot37_RCCar
             }
         }
 
+        private void Stop()
+        {
+            if (_previousButton != PauseButton)
+            {
+                _previousButton.Background = _navDefault;
+            }
+            _previousButton = StopButton;
+            StopButton.Background = _gazedUponStop;
+            StateChange(ControlStates.Stop, StopPress);
+        }
+
+        #region Button Callbacks
         private async void SlowForwardPress()
         {
             Debug.WriteLine("Slow Forward Press\n");

@@ -47,11 +47,14 @@ namespace Pilot37_RCCar
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             Globals._gaze.GazePointerEvent += OnGazePointerEvent;
+            // Update the Settings from the Global class of values
+            //     - Especially useful when starting a new session to restore previous values
             TextBlock_FastForwardValue.Text = Globals._fastForwardSetting;
             TextBlock_SlowForwardValue.Text = Globals._slowForwardSetting;
             TextBlock_ReverseValue.Text = Globals._reverseSetting;
             TextBlock_SharpTurnValue.Text = Globals._sharpTurnSetting;
             TextBlock_SoftTurnValue.Text = Globals._softTurnSetting;
+
             if (Globals._personality)
             {
                 PersonalityButton.Background = new SolidColorBrush(Colors.DarkGreen);
@@ -65,6 +68,7 @@ namespace Pilot37_RCCar
             base.OnNavigatedFrom(e);
         }
 
+        // Button interactivity for Eye Gaze
         private void OnGazePointerEvent(GazePointer sender, GazePointerEventArgs ea)
         {
             // Figure out what part of the GUI is currently being gazed upon
@@ -106,6 +110,7 @@ namespace Pilot37_RCCar
             }
         }
 
+        // Button interactivity for standard mouse clicks
         private void Settings_Button_Click(object sender, RoutedEventArgs e)
         {
             var _button = sender as Button;
@@ -130,6 +135,7 @@ namespace Pilot37_RCCar
             }
         }
 
+        // Whether triggered by a Gaze Event or a mouse click, handle the behavior here
         private void Button_Handler(Button b)
         {
             switch (b.Content)
@@ -179,6 +185,7 @@ namespace Pilot37_RCCar
             }
         }
 
+        // Save Setting values to the App storage alotted for Pilot37_RCCar
         private void SavePress(Button b)
         {
             Globals._localSettings.Values["fastForwardSetting"] = Globals._fastForwardSetting;
@@ -216,6 +223,7 @@ namespace Pilot37_RCCar
             Application.Current.Exit();
         }
 
+        // Personality button enables Donut and Wave actions on the MainPage
         private void PersonailtyPress()
         {
             if (Globals._personality)
@@ -240,13 +248,14 @@ namespace Pilot37_RCCar
                 Globals.bleWatch1 = null;
             }
 
-            // Dispose all BLE related variables
+            // TODO: This is for when/if the heartbeat functionality is enabled for the BLE device
             //if (_alive != null)
             //{
             //    _alive.Dispose();
             //    _alive = null;
             //}
 
+            // Dispose all variables related to the BLE device for disconnection
             if (Globals._heartBeatCharacteristic != null)
             {
                 if (Globals._heartBeatCharacteristic.Service != null)
@@ -272,6 +281,7 @@ namespace Pilot37_RCCar
             Globals._nordic = null;
         }
 
+        // Select button handler for choosing which Setting value to edit
         private void Select(Button b)
         {
             if (_previousSelect != null)
@@ -285,6 +295,7 @@ namespace Pilot37_RCCar
             b.Background = _selectActive;
         }
 
+        // Handler for choosing which value you would like to set for one of the Setting values
         private void ValuePress(Button b)
         {
             String _content = b.Content as String;
@@ -299,6 +310,7 @@ namespace Pilot37_RCCar
                 _currentSetting.Text = _content;
             }
             
+            // Determine which Setting value is being edited and update the Global class accordingly
             switch (_controlState)
             {
                 case ControlStates.FastForward:
@@ -368,6 +380,8 @@ namespace Pilot37_RCCar
                 }
             } else
             {
+                // This bit of code is specific to the Brushed Drive Motor in the Traxxas RC Car that was used
+                //     - Neutral is supposed to be 1500 but there is a margin surrounding this value: [1420, 1560]
                 x = 1500 - x;
                 if (x > 1420)
                 {
