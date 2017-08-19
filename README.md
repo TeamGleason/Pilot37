@@ -1,5 +1,6 @@
 # Pilot37
 A platform to drive FPV Cars &amp; Drones from a Microsoft Surface using Eye Control
+![alt text](https://github.com/TeamGleason/Pilot37/blob/master/photos/car.jpg)
 
 ## Hardware & Software Requirements
 To complete this project, you will need:
